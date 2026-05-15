@@ -299,7 +299,13 @@ MIT License - see LICENSE file for details
 
 ## 👥 Team
 
-Built with ❤️ by the OrkestrAI team for hackathons worldwide.
+Built with ❤️ by:
+
+- **[@grsanudeep42-cmd](https://github.com/grsanudeep42-cmd)** - Backend & AI/ML Engineer
+- **[@yogeswar142](https://github.com/yogeswar142)** - Frontend & UI/UX Developer
+- **[@Naagu-2508](https://github.com/Naagu-2508)** - Full-stack & DevOps Engineer
+
+*Passionate hackathon enthusiasts building tools to empower the next generation of innovators!*
 
 ## 🙏 Acknowledgments
 
