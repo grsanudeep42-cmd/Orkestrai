@@ -10,6 +10,8 @@ from app.db.models.agent_log import AgentLog
 from app.db.models.generated_artifact import GeneratedArtifact
 from app.schemas.orchestration import OrchestrationStatus
 from app.agents.strategy_agent import StrategyAgent
+from app.agents.architecture_agent import ArchitectureAgent
+from app.agents.builder_agent import BuilderAgent
 from datetime import datetime
 import structlog
 
@@ -112,6 +114,94 @@ async def start_orchestration(
     background_tasks.add_task(run_orchestration, project_id)
     
     return {"message": "Orchestration started", "project_id": project_id}
+
+
+def _format_architecture_as_markdown(architecture: dict) -> str:
+    """Format architecture dictionary as markdown"""
+    md = f"# System Architecture\n\n"
+    
+    if "tech_stack" in architecture:
+        md += "## Tech Stack\n\n"
+        tech = architecture['tech_stack']
+        if isinstance(tech, dict):
+            for category, items in tech.items():
+                md += f"### {category.replace('_', ' ').title()}\n"
+                if isinstance(items, list):
+                    for item in items:
+                        md += f"- {item}\n"
+                else:
+                    md += f"- {items}\n"
+                md += "\n"
+    
+    if "database_schema" in architecture:
+        md += "## Database Schema\n\n"
+        schema = architecture['database_schema']
+        if isinstance(schema, dict) and 'tables' in schema:
+            for table in schema['tables']:
+                if isinstance(table, dict):
+                    md += f"### {table.get('name', 'Table')}\n"
+                    if 'fields' in table:
+                        md += "**Fields:**\n"
+                        for field in table['fields']:
+                            if isinstance(field, dict):
+                                md += f"- `{field.get('name')}` ({field.get('type')}) {field.get('constraints', '')}\n"
+                    md += "\n"
+    
+    if "api_endpoints" in architecture:
+        md += "## API Endpoints\n\n"
+        endpoints = architecture['api_endpoints']
+        if isinstance(endpoints, list):
+            for endpoint in endpoints:
+                if isinstance(endpoint, dict):
+                    md += f"### {endpoint.get('method', 'GET')} {endpoint.get('path', '/')}\n"
+                    md += f"{endpoint.get('description', '')}\n\n"
+    
+    if "system_design" in architecture:
+        md += "## System Design\n\n"
+        md += f"{architecture['system_design']}\n\n"
+    
+    return md
+
+
+def _format_implementation_as_markdown(implementation: dict) -> str:
+    """Format implementation dictionary as markdown"""
+    md = f"# Implementation Plan\n\n"
+    
+    if "folder_structure" in implementation:
+        md += "## Folder Structure\n\n"
+        structure = implementation['folder_structure']
+        if isinstance(structure, dict):
+            for section, items in structure.items():
+                md += f"### {section.title()}\n```\n"
+                if isinstance(items, list):
+                    for item in items:
+                        md += f"{item}\n"
+                md += "```\n\n"
+    
+    if "implementation_phases" in implementation:
+        md += "## Implementation Phases\n\n"
+        phases = implementation['implementation_phases']
+        if isinstance(phases, list):
+            for phase in phases:
+                if isinstance(phase, dict):
+                    md += f"### {phase.get('phase', 'Phase')}\n"
+                    md += f"**Priority:** {phase.get('priority', 'medium')}\n"
+                    md += f"**Estimated Hours:** {phase.get('estimated_hours', 'TBD')}\n\n"
+                    if 'tasks' in phase:
+                        md += "**Tasks:**\n"
+                        for task in phase['tasks']:
+                            md += f"- {task}\n"
+                    md += "\n"
+    
+    if "deployment_plan" in implementation:
+        md += "## Deployment Plan\n\n"
+        deploy = implementation['deployment_plan']
+        if isinstance(deploy, dict) and 'steps' in deploy:
+            for step in deploy['steps']:
+                md += f"{step}\n"
+            md += "\n"
+    
+    return md
 
 
 def _format_strategy_as_markdown(strategy: dict) -> str:
@@ -222,42 +312,116 @@ async def run_orchestration(project_id: str):
                     **data
                 })
             
+            # ===== AGENT 1: Strategy Agent =====
             strategy_agent = StrategyAgent()
-            
-            # Run strategy agent
             logger.info("Running Strategy Agent", project_id=project_id)
-            result = await strategy_agent.analyze_project(
+            
+            strategy_result = await strategy_agent.analyze_project(
                 user_input=project.user_input,
                 preferences=project.preferences,
                 event_callback=on_agent_event
             )
             
-            # Save agent log
-            agent_log = AgentLog(
+            # Save strategy agent log
+            strategy_log = AgentLog(
                 project_id=project_id,
                 agent_name="ProductStrategyAgent",
                 action="generate_strategy",
                 status="completed",
                 started_at=datetime.utcnow(),
                 completed_at=datetime.utcnow(),
-                output_preview=result.get("strategy", "")[:500] if result else None,
-                full_output=result
+                output_preview=str(strategy_result)[:500] if strategy_result else None,
+                full_output=strategy_result
             )
-            db.add(agent_log)
+            db.add(strategy_log)
             
-            # Save generated artifact
-            if result:
-                # Convert result to markdown format
-                strategy_md = _format_strategy_as_markdown(result)
-                artifact = GeneratedArtifact(
+            # Save strategy artifact
+            if strategy_result:
+                strategy_md = _format_strategy_as_markdown(strategy_result)
+                strategy_artifact = GeneratedArtifact(
                     project_id=project_id,
                     generated_by="ProductStrategyAgent",
                     artifact_type="strategy",
                     content=strategy_md
                 )
-                db.add(artifact)
+                db.add(strategy_artifact)
             
-            # Update project status
+            await db.commit()
+            
+            # ===== AGENT 2: Architecture Agent =====
+            architecture_agent = ArchitectureAgent()
+            logger.info("Running Architecture Agent", project_id=project_id)
+            
+            architecture_result = await architecture_agent.design_architecture(
+                strategy_output=strategy_result,
+                user_input=project.user_input,
+                preferences=project.preferences,
+                event_callback=on_agent_event
+            )
+            
+            # Save architecture agent log
+            architecture_log = AgentLog(
+                project_id=project_id,
+                agent_name="ArchitectureAgent",
+                action="design_architecture",
+                status="completed",
+                started_at=datetime.utcnow(),
+                completed_at=datetime.utcnow(),
+                output_preview=str(architecture_result)[:500] if architecture_result else None,
+                full_output=architecture_result
+            )
+            db.add(architecture_log)
+            
+            # Save architecture artifact
+            if architecture_result:
+                architecture_md = _format_architecture_as_markdown(architecture_result)
+                architecture_artifact = GeneratedArtifact(
+                    project_id=project_id,
+                    generated_by="ArchitectureAgent",
+                    artifact_type="architecture",
+                    content=architecture_md
+                )
+                db.add(architecture_artifact)
+            
+            await db.commit()
+            
+            # ===== AGENT 3: Builder Agent =====
+            builder_agent = BuilderAgent()
+            logger.info("Running Builder Agent", project_id=project_id)
+            
+            implementation_result = await builder_agent.generate_implementation_plan(
+                strategy_output=strategy_result,
+                architecture_output=architecture_result,
+                user_input=project.user_input,
+                preferences=project.preferences,
+                event_callback=on_agent_event
+            )
+            
+            # Save builder agent log
+            builder_log = AgentLog(
+                project_id=project_id,
+                agent_name="BuilderAgent",
+                action="generate_implementation_plan",
+                status="completed",
+                started_at=datetime.utcnow(),
+                completed_at=datetime.utcnow(),
+                output_preview=str(implementation_result)[:500] if implementation_result else None,
+                full_output=implementation_result
+            )
+            db.add(builder_log)
+            
+            # Save implementation artifact
+            if implementation_result:
+                implementation_md = _format_implementation_as_markdown(implementation_result)
+                implementation_artifact = GeneratedArtifact(
+                    project_id=project_id,
+                    generated_by="BuilderAgent",
+                    artifact_type="implementation_plan",
+                    content=implementation_md
+                )
+                db.add(implementation_artifact)
+            
+            # Update project status to completed
             project.status = "completed"
             project.completed_at = datetime.utcnow()
             project.updated_at = datetime.utcnow()
@@ -270,12 +434,12 @@ async def run_orchestration(project_id: str):
                 {
                     "type": "orchestration_complete",
                     "project_id": project_id,
-                    "message": "Strategy generation completed successfully",
+                    "message": "All agents completed successfully",
                     "timestamp": datetime.utcnow().isoformat()
                 }
             )
             
-            logger.info("Orchestration completed successfully", project_id=project_id)
+            logger.info("Orchestration completed successfully - 3 agents executed", project_id=project_id)
             
         except Exception as e:
             logger.error("Orchestration failed", project_id=project_id, error=str(e))
