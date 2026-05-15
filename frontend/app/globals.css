@@ -1,0 +1,74 @@
+@import "tailwindcss";
+@config "../tailwind.config.ts";
+
+@layer base {
+  :root {
+    --background: #0a0a0f;
+    --foreground: #e4e1e9;
+  }
+
+  body {
+    @apply bg-background text-on-background antialiased;
+    font-family: 'Inter', sans-serif;
+  }
+
+  * {
+    @apply border-border;
+  }
+}
+
+@layer utilities {
+  .glass-panel {
+    background: rgba(27, 27, 32, 0.6);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+  }
+
+  .glow-active {
+    box-shadow: 0 0 10px rgba(137, 206, 255, 0.3);
+    border-color: rgba(137, 206, 255, 0.5);
+  }
+
+  .pulse-dot {
+    animation: pulse 2s infinite;
+  }
+
+  .neon-focus:focus {
+    box-shadow: 0 0 12px rgba(137, 206, 255, 0.4);
+    border-color: #89ceff;
+    outline: none;
+  }
+}
+
+@keyframes pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(78, 222, 163, 0.4);
+  }
+  70% {
+    box-shadow: 0 0 0 6px rgba(78, 222, 163, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(78, 222, 163, 0);
+  }
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #0a0a0f;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #3e4850;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #88929b;
+}
+
+/* Made with Bob */
