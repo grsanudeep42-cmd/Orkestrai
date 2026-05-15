@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>OrkestrAI Dashboard</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&amp;family=JetBrains+Mono:wght@400;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "tertiary-fixed-dim": "#4edea3",
+                        "surface-container-highest": "#35343a",
+                        "on-secondary-container": "#c4abff",
+                        "primary": "#89ceff",
+                        "on-surface": "#e4e1e9",
+                        "error-container": "#93000a",
+                        "outline-variant": "#3e4850",
+                        "error": "#ffb4ab",
+                        "on-tertiary-fixed-variant": "#005236",
+                        "surface-dim": "#131318",
+                        "on-primary-fixed": "#001e2f",
+                        "tertiary-fixed": "#6ffbbe",
+                        "secondary-fixed": "#e9ddff",
+                        "on-error-container": "#ffdad6",
+                        "surface-variant": "#35343a",
+                        "on-secondary-fixed": "#23005c",
+                        "on-tertiary-container": "#003b26",
+                        "primary-fixed": "#c9e6ff",
+                        "surface": "#131318",
+                        "outline": "#88929b",
+                        "tertiary-container": "#00b17b",
+                        "on-primary-fixed-variant": "#004c6e",
+                        "background": "#0a0a0f",
+                        "on-error": "#690005",
+                        "secondary-container": "#571bc1",
+                        "on-secondary-fixed-variant": "#5516be",
+                        "surface-container-low": "#1b1b20",
+                        "primary-fixed-dim": "#89ceff",
+                        "on-surface-variant": "#bec8d2",
+                        "on-primary": "#00344d",
+                        "secondary-fixed-dim": "#d0bcff",
+                        "inverse-on-surface": "#303036",
+                        "surface-container-high": "#2a292f",
+                        "on-secondary": "#3c0091",
+                        "inverse-primary": "#006591",
+                        "primary-container": "#0ea5e9",
+                        "secondary": "#d0bcff",
+                        "surface-container": "#1f1f25",
+                        "tertiary": "#4edea3",
+                        "inverse-surface": "#e4e1e9",
+                        "on-background": "#e4e1e9",
+                        "on-primary-container": "#003751",
+                        "surface-tint": "#89ceff",
+                        "surface-bright": "#39383e",
+                        "surface-container-lowest": "#0e0e13",
+                        "on-tertiary": "#003824",
+                        "on-tertiary-fixed": "#002113"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    "spacing": {
+                        "margin": "24px",
+                        "inspector-width": "320px",
+                        "unit": "4px",
+                        "sidebar-width": "260px",
+                        "gutter": "16px"
+                    },
+                    "fontFamily": {
+                        "code-sm": ["JetBrains Mono"],
+                        "label-caps": ["JetBrains Mono"],
+                        "headline-md": ["Inter"],
+                        "body-base": ["Inter"],
+                        "display-lg": ["Inter"]
+                    },
+                    "fontSize": {
+                        "code-sm": ["13px", {"lineHeight": "18px", "fontWeight": "400"}],
+                        "label-caps": ["11px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600"}],
+                        "headline-md": ["24px", {"lineHeight": "32px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                        "body-base": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                        "display-lg": ["48px", {"lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700"}]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .material-symbols-outlined.fill {
+            font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        body {
+            background-color: theme('colors.background');
+            color: theme('colors.on-background');
+        }
+    </style>
+<style data-stitch-cursor=""></style><style data-stitch-scroll-lock=""></style></head>
+<body class="antialiased min-h-screen font-body-base text-body-base flex flex-col bg-[#0a0a0f]">
+<!-- TopAppBar -->
+<header class="fixed top-0 w-full z-50 bg-[#0a0a0f]/90 backdrop-blur-xl border-b border-outline-variant/30 flex items-center justify-between px-margin h-16">
+<div class="flex items-center space-x-gutter">
+<span class="font-display-lg text-headline-md tracking-tighter text-primary">OrkestrAI</span>
+<div class="hidden md:flex items-center space-x-unit ml-8">
+<!-- Navigation Links -->
+<a class="text-primary border-b-2 border-primary pb-1 font-body-base text-body-base hover:text-primary transition-colors duration-200 mx-2" href="#">Dashboard</a>
+<a class="text-on-surface-variant font-body-base text-body-base hover:text-primary transition-colors duration-200 mx-2" href="#">Projects</a>
+<a class="text-on-surface-variant font-body-base text-body-base hover:text-primary transition-colors duration-200 mx-2" href="#">Registry</a>
+<a class="text-on-surface-variant font-body-base text-body-base hover:text-primary transition-colors duration-200 mx-2" href="#">Nodes</a>
+</div>
+</div>
+<div class="flex items-center space-x-gutter">
+<div class="relative hidden sm:block">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-sm">search</span>
+<input class="bg-surface-container-low border border-outline-variant/30 rounded-full py-1.5 pl-9 pr-4 text-sm font-code-sm text-code-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary w-64" placeholder="Search..." type="text"/>
+</div>
+<button class="text-on-surface-variant hover:text-primary transition-colors duration-200">
+<span class="material-symbols-outlined" data-icon="notifications">notifications</span>
+</button>
+<button class="text-on-surface-variant hover:text-primary transition-colors duration-200">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+</button>
+<div class="w-8 h-8 rounded-full bg-surface-container-high border border-outline-variant/50 overflow-hidden ml-2">
+<img alt="User profile" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBoM5J6t1RH38pcs0IPGtUDgEAG2mnSeipl7zqLuEmxD4d_KouGqtZE7aHAli-qOZ6kbvkxv428kTDnnbumS7tE0CnS8I82y8bssWTv1u2QCv3ABdva7JDuOVAqBx3MefQsUItu60ac0Wd0qj5SyUeSVcUJBEAMRIyvNPchVeaoXX0sNa3OaqFNUAQSRXFTx9qR9DA76u_G676q-ngwglBKxloL7lwm01lmJot_brnhhfQSjqTTdeweKY7hjhzJtB1I0Ibne5O6LH1x"/>
+</div>
+</div>
+</header>
+<div class="flex flex-1 pt-16">
+<!-- SideNavBar -->
+<nav class="hidden md:flex flex-col py-gutter space-y-unit fixed left-0 top-16 h-[calc(100vh-64px)] w-sidebar-width bg-surface-container-lowest/50 backdrop-blur-lg border-r border-outline-variant/20 z-40">
+<div class="px-margin mb-6 mt-4">
+<div class="flex items-center space-x-3 mb-6">
+<div class="w-10 h-10 rounded bg-primary-container/20 flex items-center justify-center border border-primary/30">
+<span class="material-symbols-outlined text-primary">hive</span>
+</div>
+<div>
+<h2 class="font-label-caps text-label-caps text-on-surface">Agent Hive</h2>
+<p class="font-code-sm text-code-sm text-on-surface-variant">5 Agents Active</p>
+</div>
+</div>
+<button class="w-full bg-primary/10 hover:bg-primary/20 text-primary border border-primary/30 rounded py-2 font-code-sm text-code-sm flex items-center justify-center transition-colors">
+<span class="material-symbols-outlined mr-2 text-sm">add</span>
+                    Deploy New Agent
+                </button>
+</div>
+<div class="flex-1 px-unit space-y-1">
+<a class="bg-secondary-container/30 text-secondary border-r-2 border-secondary font-code-sm text-code-sm flex items-center px-4 py-2 hover:bg-surface-container-highest transition-all group" href="#">
+<span class="material-symbols-outlined mr-3 group-hover:scale-110 transition-transform">psychology</span>
+                    Strategy
+                </a>
+<a class="text-on-surface-variant font-code-sm text-code-sm flex items-center px-4 py-2 hover:bg-surface-container-highest transition-all group" href="#">
+<span class="material-symbols-outlined mr-3 group-hover:scale-110 transition-transform">architecture</span>
+                    Architect
+                </a>
+<a class="text-on-surface-variant font-code-sm text-code-sm flex items-center px-4 py-2 hover:bg-surface-container-highest transition-all group" href="#">
+<span class="material-symbols-outlined mr-3 group-hover:scale-110 transition-transform">build</span>
+                    Builder
+                </a>
+<a class="text-on-surface-variant font-code-sm text-code-sm flex items-center px-4 py-2 hover:bg-surface-container-highest transition-all group" href="#">
+<span class="material-symbols-outlined mr-3 group-hover:scale-110 transition-transform">fact_check</span>
+                    QA
+                </a>
+<a class="text-on-surface-variant font-code-sm text-code-sm flex items-center px-4 py-2 hover:bg-surface-container-highest transition-all group" href="#">
+<span class="material-symbols-outlined mr-3 group-hover:scale-110 transition-transform">rocket_launch</span>
+                    Deploy
+                </a>
+</div>
+<div class="px-unit pb-gutter space-y-1 mt-auto">
+<a class="text-on-surface-variant font-code-sm text-code-sm flex items-center px-4 py-2 hover:bg-surface-container-highest transition-all" href="#">
+<span class="material-symbols-outlined mr-3">menu_book</span>
+                    Documentation
+                </a>
+<a class="text-on-surface-variant font-code-sm text-code-sm flex items-center px-4 py-2 hover:bg-surface-container-highest transition-all" href="#">
+<span class="material-symbols-outlined mr-3">contact_support</span>
+                    Support
+                </a>
+</div>
+</nav>
+<!-- Main Content Area -->
+<main class="flex-1 md:ml-sidebar-width p-margin overflow-y-auto bg-[#0a0a0f]">
+<!-- Page Header -->
+<div class="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
+<div>
+<h1 class="font-display-lg text-headline-md text-on-surface">My Projects</h1>
+<p class="font-body-base text-body-base text-on-surface-variant mt-1">Manage and orchestrate your active AI environments.</p>
+</div>
+<div class="flex items-center space-x-3">
+<button class="bg-surface-container hover:bg-surface-container-high border border-outline-variant/30 text-on-surface px-4 py-2 rounded flex items-center font-code-sm text-code-sm transition-colors">
+<span class="material-symbols-outlined mr-2 text-sm">filter_list</span>
+                        Filter
+                    </button>
+<button class="bg-primary hover:bg-primary-fixed text-on-primary px-4 py-2 rounded flex items-center font-code-sm text-code-sm transition-colors font-semibold">
+<span class="material-symbols-outlined mr-2 text-sm">add</span>
+                        New Project
+                    </button>
+</div>
+</div>
+<!-- Filter Bar -->
+<div class="flex items-center space-x-2 border-b border-outline-variant/20 pb-4 mb-8">
+<button class="px-3 py-1 rounded-full bg-primary/20 text-primary border border-primary/30 font-label-caps text-label-caps">All (12)</button>
+<button class="px-3 py-1 rounded-full bg-transparent text-on-surface-variant hover:text-on-surface hover:bg-surface-container border border-transparent font-label-caps text-label-caps transition-colors">Active (8)</button>
+<button class="px-3 py-1 rounded-full bg-transparent text-on-surface-variant hover:text-on-surface hover:bg-surface-container border border-transparent font-label-caps text-label-caps transition-colors">Completed (4)</button>
+</div>
+<!-- Projects Grid -->
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+<!-- Project Card 1 -->
+<div class="bg-surface-container-low border border-outline-variant/20 rounded-lg overflow-hidden hover:border-primary/50 transition-colors group cursor-pointer flex flex-col relative">
+<div class="absolute inset-0 bg-primary/5 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"></div>
+<div class="h-32 bg-surface-container relative overflow-hidden">
+<img alt="Data visualization" class="w-full h-full object-cover opacity-60 mix-blend-luminosity group-hover:mix-blend-normal transition-all duration-500" data-alt="A sophisticated data visualization dashboard displaying glowing interconnected nodes against a dark background. Thin laser-like lines connect geometric shapes representing data flow. The aesthetic is high-tech sci-fi, utilizing deep blacks, bright neon blues, and subtle purple accents to convey an autonomous AI system processing complex information." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAk02OrvXXotVR4InZ7O0fNyy20LgCTcFlj1BHsAkhZzMfy6GqXi6Vh0KW8_p7vMAOnKc_7Yf8p3BpajkIe1gslzKniqW7HRIcVCupPM32hGSs5bLyNRsVKZ2YWf6dkZw0xtOhl-Ac0iyPJvc2bOmFk0fbuyhltWsBOKd6G9bEsV1Oyi0dWNmzapuaSoOa0vrV2RQpDWLkrFPcVY1RkQJ5Ks_gp6PmZ08Pc3eNRuE95S-hnmriYDY3Rx--mi_LctmzOqwWYkEAG1Hy3"/>
+<div class="absolute top-3 left-3 flex items-center bg-surface/80 backdrop-blur-md border border-outline-variant/30 rounded-full px-2 py-0.5">
+<span class="w-1.5 h-1.5 rounded-full bg-tertiary mr-1.5 shadow-[0_0_8px_theme('colors.tertiary')]"></span>
+<span class="font-label-caps text-label-caps text-on-surface">Online</span>
+</div>
+</div>
+<div class="p-4 flex-1 flex flex-col">
+<div class="flex justify-between items-start mb-2">
+<h3 class="font-headline-md text-body-base font-semibold text-on-surface truncate pr-2">Alpha Nexus Node</h3>
+<button class="text-on-surface-variant hover:text-primary">
+<span class="material-symbols-outlined text-sm">more_vert</span>
+</button>
+</div>
+<p class="font-body-base text-code-sm text-on-surface-variant line-clamp-2 mb-4">Core reasoning engine for real-time market data analysis and predictive modeling.</p>
+<div class="mt-auto flex items-center justify-between text-on-surface-variant pt-3 border-t border-outline-variant/10">
+<div class="flex -space-x-2">
+<div class="w-6 h-6 rounded-full bg-surface-container border border-surface flex items-center justify-center font-label-caps text-[9px] text-primary">A1</div>
+<div class="w-6 h-6 rounded-full bg-surface-container border border-surface flex items-center justify-center font-label-caps text-[9px] text-tertiary">M2</div>
+</div>
+<span class="font-code-sm text-[11px]">Updated 2h ago</span>
+</div>
+</div>
+</div>
+<!-- Project Card 2 -->
+<div class="bg-surface-container-low border border-outline-variant/20 rounded-lg overflow-hidden hover:border-primary/50 transition-colors group cursor-pointer flex flex-col relative">
+<div class="absolute inset-0 bg-primary/5 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"></div>
+<div class="h-32 bg-surface-container relative overflow-hidden">
+<img alt="Server rack infrastructure" class="w-full h-full object-cover opacity-60 mix-blend-luminosity group-hover:mix-blend-normal transition-all duration-500" data-alt="A modern server room aisle illuminated by cool blue and bright cyan LED status lights. Racks of high-performance computing equipment line both sides of the corridor, receding into the distance. The lighting creates a dark, cinematic sci-fi atmosphere emphasizing advanced processing power and digital infrastructure." src="https://lh3.googleusercontent.com/aida-public/AB6AXuC_tPqutuujBGLdB1hCQXTk4JxBsEByP_onbUkZYFoQVgI5HEqceAnXM1j3RN8cknTUSKF-okEtAsGdTU8YBp-pS-S-mHjyakoZ-k9-SSjA_BrErKfgrT0RpmGgAwu82FZWQI5j1XpPSCBc5eA2LaRhBGpSCkSBKVWtH0FdVl142OpsHJ0FOPOQGo6fmtzRDQ_dgg7ntfsEUrmPxi3-7HTfn7u2nON8paPPjOxItyHTDbPsTQvOc1qqdLwO-zODLocnHu2gtZdStaz7"/>
+<div class="absolute top-3 left-3 flex items-center bg-surface/80 backdrop-blur-md border border-outline-variant/30 rounded-full px-2 py-0.5">
+<span class="w-1.5 h-1.5 rounded-full bg-tertiary mr-1.5 shadow-[0_0_8px_theme('colors.tertiary')]"></span>
+<span class="font-label-caps text-label-caps text-on-surface">Online</span>
+</div>
+</div>
+<div class="p-4 flex-1 flex flex-col">
+<div class="flex justify-between items-start mb-2">
+<h3 class="font-headline-md text-body-base font-semibold text-on-surface truncate pr-2">Beta Sync Pipeline</h3>
+<button class="text-on-surface-variant hover:text-primary">
+<span class="material-symbols-outlined text-sm">more_vert</span>
+</button>
+</div>
+<p class="font-body-base text-code-sm text-on-surface-variant line-clamp-2 mb-4">ETL orchestration layer connecting legacy databases to the new vector store.</p>
+<div class="mt-auto flex items-center justify-between text-on-surface-variant pt-3 border-t border-outline-variant/10">
+<div class="flex -space-x-2">
+<div class="w-6 h-6 rounded-full bg-surface-container border border-surface flex items-center justify-center font-label-caps text-[9px] text-secondary">E1</div>
+</div>
+<span class="font-code-sm text-[11px]">Updated 5h ago</span>
+</div>
+</div>
+</div>
+<!-- Project Card 3 (Offline) -->
+<div class="bg-surface-container-low border border-outline-variant/20 rounded-lg overflow-hidden hover:border-outline-variant transition-colors group cursor-pointer flex flex-col relative opacity-80">
+<div class="h-32 bg-surface-container relative overflow-hidden grayscale">
+<div class="absolute inset-0 bg-surface/40 z-10"></div>
+<div class="w-full h-full bg-gradient-to-br from-surface-container-highest to-surface-container-low flex items-center justify-center">
+<span class="material-symbols-outlined text-outline-variant text-4xl">cloud_off</span>
+</div>
+<div class="absolute top-3 left-3 flex items-center bg-surface/80 backdrop-blur-md border border-outline-variant/30 rounded-full px-2 py-0.5 z-20">
+<span class="w-1.5 h-1.5 rounded-full bg-outline mr-1.5"></span>
+<span class="font-label-caps text-label-caps text-on-surface-variant">Paused</span>
+</div>
+</div>
+<div class="p-4 flex-1 flex flex-col">
+<div class="flex justify-between items-start mb-2">
+<h3 class="font-headline-md text-body-base font-semibold text-on-surface-variant truncate pr-2">Delta Test Suite</h3>
+<button class="text-on-surface-variant hover:text-on-surface">
+<span class="material-symbols-outlined text-sm">more_vert</span>
+</button>
+</div>
+<p class="font-body-base text-code-sm text-on-surface-variant line-clamp-2 mb-4">Automated regression testing environment for staging deployments.</p>
+<div class="mt-auto flex items-center justify-between text-on-surface-variant pt-3 border-t border-outline-variant/10">
+<div class="flex -space-x-2 opacity-50">
+<div class="w-6 h-6 rounded-full bg-surface-container border border-surface flex items-center justify-center font-label-caps text-[9px] text-outline">Q1</div>
+</div>
+<span class="font-code-sm text-[11px]">Updated 2d ago</span>
+</div>
+</div>
+</div>
+<!-- Project Card 4 -->
+<div class="bg-surface-container-low border border-outline-variant/20 rounded-lg overflow-hidden hover:border-primary/50 transition-colors group cursor-pointer flex flex-col relative">
+<div class="absolute inset-0 bg-primary/5 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"></div>
+<div class="h-32 bg-surface-container relative overflow-hidden">
+<img alt="Global network connection" class="w-full h-full object-cover opacity-60 mix-blend-luminosity group-hover:mix-blend-normal transition-all duration-500" data-alt="A stylized global network visualization showing Earth from space at night. Intricate webs of glowing fiber-optic like lines span across continents, indicating massive data transfer and connectivity. The dominant colors are deep space black, electric blue, and faint emerald green representing active nodes in a vast AI system." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBLPU7r0QolmmcnAu13V8bGzQQatYk1HEks_QEk9LBIKfOwwT8fe-PuaWhhWtzLap0340zjo-eJXfr_-ppjPHwa7AdwNW8cqgjBHOPHJKwYCmqLyXgcP0QpUuiX8ArLnC2rCiLp3p5V9QYKWLF5e6ZXa42jhBei6bCf02fbGBpIXlNXXU5qb35_B3TAq0EajWthyLhdA2hQkaj9TpiDfDg6GjOlroi7Ovr3TgcNkI0RP2jWiB38QfSjY_XOVp7EIg-D3tDk4-hmKWf2"/>
+<div class="absolute top-3 left-3 flex items-center bg-surface/80 backdrop-blur-md border border-outline-variant/30 rounded-full px-2 py-0.5">
+<span class="w-1.5 h-1.5 rounded-full bg-tertiary mr-1.5 shadow-[0_0_8px_theme('colors.tertiary')]"></span>
+<span class="font-label-caps text-label-caps text-on-surface">Online</span>
+</div>
+</div>
+<div class="p-4 flex-1 flex flex-col">
+<div class="flex justify-between items-start mb-2">
+<h3 class="font-headline-md text-body-base font-semibold text-on-surface truncate pr-2">Gamma Deployment Hub</h3>
+<button class="text-on-surface-variant hover:text-primary">
+<span class="material-symbols-outlined text-sm">more_vert</span>
+</button>
+</div>
+<p class="font-body-base text-code-sm text-on-surface-variant line-clamp-2 mb-4">Global edge-node distribution controller managing containerized AI agents.</p>
+<div class="mt-auto flex items-center justify-between text-on-surface-variant pt-3 border-t border-outline-variant/10">
+<div class="flex -space-x-2">
+<div class="w-6 h-6 rounded-full bg-surface-container border border-surface flex items-center justify-center font-label-caps text-[9px] text-primary">D1</div>
+<div class="w-6 h-6 rounded-full bg-surface-container border border-surface flex items-center justify-center font-label-caps text-[9px] text-secondary">A2</div>
+<div class="w-6 h-6 rounded-full bg-surface-container border border-surface flex items-center justify-center font-label-caps text-[9px] text-tertiary">M1</div>
+</div>
+<span class="font-code-sm text-[11px]">Updated 10m ago</span>
+</div>
+</div>
+</div>
+</div>
+</main>
+</div>
+</body></html>

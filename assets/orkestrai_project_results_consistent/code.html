@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>OrkestrAI - Strategy Results</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&amp;family=JetBrains+Mono:wght@400;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "tertiary-fixed-dim": "#4edea3",
+                        "surface-container-highest": "#35343a",
+                        "on-secondary-container": "#c4abff",
+                        "primary": "#89ceff",
+                        "on-surface": "#e4e1e9",
+                        "error-container": "#93000a",
+                        "outline-variant": "#3e4850",
+                        "error": "#ffb4ab",
+                        "on-tertiary-fixed-variant": "#005236",
+                        "surface-dim": "#131318",
+                        "on-primary-fixed": "#001e2f",
+                        "tertiary-fixed": "#6ffbbe",
+                        "secondary-fixed": "#e9ddff",
+                        "on-error-container": "#ffdad6",
+                        "surface-variant": "#35343a",
+                        "on-secondary-fixed": "#23005c",
+                        "on-tertiary-container": "#003b26",
+                        "primary-fixed": "#c9e6ff",
+                        "surface": "#131318",
+                        "outline": "#88929b",
+                        "tertiary-container": "#00b17b",
+                        "on-primary-fixed-variant": "#004c6e",
+                        "background": "#131318",
+                        "on-error": "#690005",
+                        "secondary-container": "#571bc1",
+                        "on-secondary-fixed-variant": "#5516be",
+                        "surface-container-low": "#1b1b20",
+                        "primary-fixed-dim": "#89ceff",
+                        "on-surface-variant": "#bec8d2",
+                        "on-primary": "#00344d",
+                        "secondary-fixed-dim": "#d0bcff",
+                        "inverse-on-surface": "#303036",
+                        "surface-container-high": "#2a292f",
+                        "on-secondary": "#3c0091",
+                        "inverse-primary": "#006591",
+                        "primary-container": "#0ea5e9",
+                        "secondary": "#d0bcff",
+                        "surface-container": "#1f1f25",
+                        "tertiary": "#4edea3",
+                        "inverse-surface": "#e4e1e9",
+                        "on-background": "#e4e1e9",
+                        "on-primary-container": "#003751",
+                        "surface-tint": "#89ceff",
+                        "surface-bright": "#39383e",
+                        "surface-container-lowest": "#0e0e13",
+                        "on-tertiary": "#003824",
+                        "on-tertiary-fixed": "#002113"
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    spacing: {
+                        "margin": "24px",
+                        "inspector-width": "320px",
+                        "unit": "4px",
+                        "sidebar-width": "260px",
+                        "gutter": "16px"
+                    },
+                    fontFamily: {
+                        "code-sm": ["JetBrains Mono"],
+                        "label-caps": ["JetBrains Mono"],
+                        "headline-md": ["Inter"],
+                        "body-base": ["Inter"],
+                        "display-lg": ["Inter"]
+                    },
+                    fontSize: {
+                        "code-sm": ["13px", { lineHeight: "18px", fontWeight: "400" }],
+                        "label-caps": ["11px", { lineHeight: "16px", letterSpacing: "0.05em", fontWeight: "600" }],
+                        "headline-md": ["24px", { lineHeight: "32px", letterSpacing: "-0.01em", fontWeight: "600" }],
+                        "body-base": ["14px", { lineHeight: "20px", fontWeight: "400" }],
+                        "display-lg": ["48px", { lineHeight: "56px", letterSpacing: "-0.02em", fontWeight: "700" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        /* Sci-Fi Grid Background */
+        .bg-grid-pattern {
+            background-size: 40px 40px;
+            background-image: linear-gradient(to right, rgba(136, 146, 155, 0.05) 1px, transparent 1px),
+                              linear-gradient(to bottom, rgba(136, 146, 155, 0.05) 1px, transparent 1px);
+        }
+        /* Custom scrollbar for webkit */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #3e4850; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #88929b; }
+    </style>
+</head>
+<body class="bg-[#0a0a0f] text-on-surface font-body-base text-body-base h-screen overflow-hidden flex bg-grid-pattern">
+<!-- TopAppBar -->
+<header class="fixed top-0 w-full z-50 bg-[#0a0a0f]/80 backdrop-blur-xl border-b border-outline-variant/30 flex items-center justify-between px-margin h-16 w-full">
+<!-- Brand/Search -->
+<div class="flex items-center gap-margin">
+<div class="font-display-lg text-headline-md tracking-tighter text-primary">OrkestrAI</div>
+<div class="relative hidden md:block w-64">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-sm">search</span>
+<input class="w-full bg-surface-container-highest/50 border border-outline-variant/50 rounded-full py-1.5 pl-9 pr-4 font-code-sm text-code-sm text-on-surface placeholder:text-on-surface-variant focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all" placeholder="Search..." type="text"/>
+</div>
+</div>
+<!-- Navigation Links -->
+<nav class="hidden md:flex items-center gap-gutter h-full">
+<a class="text-on-surface-variant hover:text-primary transition-colors duration-200 h-full flex items-center px-2" href="#">Dashboard</a>
+<a class="text-primary border-b-2 border-primary pb-1 h-full flex items-center px-2" href="#">Projects</a>
+<a class="text-on-surface-variant hover:text-primary transition-colors duration-200 h-full flex items-center px-2" href="#">Registry</a>
+<a class="text-on-surface-variant hover:text-primary transition-colors duration-200 h-full flex items-center px-2" href="#">Nodes</a>
+</nav>
+<!-- Trailing Actions -->
+<div class="flex items-center gap-gutter">
+<button class="text-on-surface-variant hover:text-primary transition-colors duration-200 p-2 rounded-full hover:bg-surface-container-highest">
+<span class="material-symbols-outlined">notifications</span>
+</button>
+<button class="text-on-surface-variant hover:text-primary transition-colors duration-200 p-2 rounded-full hover:bg-surface-container-highest">
+<span class="material-symbols-outlined">settings</span>
+</button>
+<div class="w-8 h-8 rounded-full border border-outline-variant/50 overflow-hidden ml-2">
+<img alt="User profile" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAUAF-AS194QSZaql8PPG-lb4ZZX-narlCZwIhVsIRqdpmd-JuwzbxxvUPoRek4629zpsAjK3nC-7M6aKlaa82yKRTWsvBH_a503zs9EBL9UmeQagfr9OkD4-SZWHXmbnqLOEh2h_7SrgPwXBZIFYkQ7HXqCMeAIj3a8l4JpdJskt_XGokBHBSzTLxYYEgGVFn5IXEnwm7-T_em7rNIpEM7PdHo9nCunXgW1KYtySVrXYU99HLoqQ7pORS6G753pccvDanieMfCuXEY"/>
+</div>
+</div>
+</header>
+<!-- SideNavBar -->
+<aside class="fixed left-0 top-16 h-[calc(100vh-64px)] w-sidebar-width bg-[#0a0a0f]/90 backdrop-blur-lg border-r border-outline-variant/20 flex flex-col py-gutter space-y-unit z-40">
+<!-- Header -->
+<div class="px-gutter pb-gutter mb-gutter border-b border-outline-variant/20 flex items-center gap-3">
+<div class="w-10 h-10 rounded bg-primary-container text-on-primary-container flex items-center justify-center font-label-caps text-label-caps border border-primary/30">
+                AH
+            </div>
+<div>
+<div class="font-label-caps text-label-caps text-on-surface">Agent Hive</div>
+<div class="font-code-sm text-code-sm text-on-surface-variant">5 Agents Active</div>
+</div>
+</div>
+<!-- Main Navigation -->
+<nav class="flex-1 flex flex-col px-2 space-y-1 overflow-y-auto">
+<a class="flex items-center gap-3 px-3 py-2 rounded bg-secondary-container/30 text-secondary border-r-2 border-secondary group Active: translate-x-1 transition-transform" href="#">
+<span class="material-symbols-outlined text-lg">psychology</span>
+<span class="font-label-caps text-label-caps uppercase tracking-wider">Strategy</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded text-on-surface-variant hover:bg-surface-container-highest transition-all group" href="#">
+<span class="material-symbols-outlined text-lg group-hover:text-tertiary transition-colors">architecture</span>
+<span class="font-label-caps text-label-caps uppercase tracking-wider">Architect</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded text-on-surface-variant hover:bg-surface-container-highest transition-all group" href="#">
+<span class="material-symbols-outlined text-lg group-hover:text-tertiary transition-colors">build</span>
+<span class="font-label-caps text-label-caps uppercase tracking-wider">Builder</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded text-on-surface-variant hover:bg-surface-container-highest transition-all group" href="#">
+<span class="material-symbols-outlined text-lg group-hover:text-tertiary transition-colors">fact_check</span>
+<span class="font-label-caps text-label-caps uppercase tracking-wider">QA</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded text-on-surface-variant hover:bg-surface-container-highest transition-all group" href="#">
+<span class="material-symbols-outlined text-lg group-hover:text-tertiary transition-colors">rocket_launch</span>
+<span class="font-label-caps text-label-caps uppercase tracking-wider">Deploy</span>
+</a>
+</nav>
+<!-- CTA & Footer -->
+<div class="px-gutter mt-auto flex flex-col gap-unit pt-gutter border-t border-outline-variant/20">
+<button class="w-full bg-primary text-on-primary font-label-caps text-label-caps uppercase py-2 rounded hover:bg-primary-fixed transition-colors flex justify-center items-center gap-2">
+<span class="material-symbols-outlined text-sm">add</span>
+                Deploy New Agent
+            </button>
+<div class="flex flex-col gap-1 mt-4">
+<a class="flex items-center gap-3 px-3 py-1.5 rounded text-on-surface-variant hover:text-on-surface hover:bg-surface-container-highest transition-all" href="#">
+<span class="material-symbols-outlined text-[16px]">menu_book</span>
+<span class="font-code-sm text-code-sm">Documentation</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-1.5 rounded text-on-surface-variant hover:text-on-surface hover:bg-surface-container-highest transition-all" href="#">
+<span class="material-symbols-outlined text-[16px]">contact_support</span>
+<span class="font-code-sm text-code-sm">Support</span>
+</a>
+</div>
+</div>
+</aside>
+<!-- Main Content Canvas -->
+<main class="flex-1 ml-[260px] mt-[64px] p-margin flex flex-col gap-margin h-[calc(100vh-64px)] overflow-y-auto">
+<!-- Header Section -->
+<div class="flex flex-col md:flex-row md:items-end justify-between gap-4 border-b border-outline-variant/30 pb-margin">
+<div>
+<div class="flex items-center gap-3 mb-2">
+<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-surface-container-high border border-outline-variant/50 font-code-sm text-code-sm text-on-surface-variant">
+<span class="w-2 h-2 rounded-full bg-tertiary shadow-[0_0_6px_currentColor]"></span>
+                        Generation Complete
+                    </span>
+<span class="font-code-sm text-code-sm text-outline">ID: PRJ-9942</span>
+</div>
+<h1 class="font-headline-md text-headline-md text-on-surface flex items-center gap-3">
+                    Project Nexus Output
+                </h1>
+</div>
+<div class="flex items-center gap-3">
+<button class="px-4 py-2 rounded bg-surface-container border border-outline-variant/50 text-on-surface font-label-caps text-label-caps uppercase hover:bg-surface-container-highest transition-colors flex items-center gap-2">
+<span class="material-symbols-outlined text-sm">share</span>
+                    Share
+                </button>
+<button class="px-4 py-2 rounded bg-primary/10 border border-primary/30 text-primary font-label-caps text-label-caps uppercase hover:bg-primary/20 transition-colors shadow-[0_0_15px_rgba(137,206,255,0.05)] flex items-center gap-2">
+<span class="material-symbols-outlined text-sm">download</span>
+                    Download All
+                </button>
+</div>
+</div>
+<!-- Local Context Tabs (As Requested) -->
+<div class="flex items-center gap-1 bg-surface-container-low/50 p-1 rounded-lg border border-outline-variant/20 w-fit backdrop-blur-sm">
+<button class="px-4 py-1.5 rounded-md bg-secondary-container/40 text-secondary font-label-caps text-label-caps uppercase border border-secondary/20 shadow-[0_0_10px_rgba(208,188,255,0.1)]">Strategy</button>
+<button class="px-4 py-1.5 rounded-md text-on-surface-variant hover:text-on-surface hover:bg-surface-container-highest font-label-caps text-label-caps uppercase transition-colors">Architecture</button>
+<button class="px-4 py-1.5 rounded-md text-on-surface-variant hover:text-on-surface hover:bg-surface-container-highest font-label-caps text-label-caps uppercase transition-colors">Code</button>
+<button class="px-4 py-1.5 rounded-md text-on-surface-variant hover:text-on-surface hover:bg-surface-container-highest font-label-caps text-label-caps uppercase transition-colors">GitHub</button>
+<button class="px-4 py-1.5 rounded-md text-on-surface-variant hover:text-on-surface hover:bg-surface-container-highest font-label-caps text-label-caps uppercase transition-colors">Pitch</button>
+</div>
+<!-- Dashboard Bento Grid -->
+<div class="grid grid-cols-1 xl:grid-cols-12 gap-gutter flex-1">
+<!-- Left Column: Problem & Stories -->
+<div class="xl:col-span-8 flex flex-col gap-gutter">
+<!-- Problem Statement -->
+<div class="bg-surface-container-low/60 backdrop-blur-md rounded-xl p-6 border border-outline-variant/30 border-t-white/5 relative overflow-hidden group">
+<div class="absolute top-0 right-0 p-6 opacity-10 pointer-events-none">
+<span class="material-symbols-outlined text-[120px]">target</span>
+</div>
+<div class="flex items-center gap-2 mb-4">
+<span class="material-symbols-outlined text-tertiary">lightbulb</span>
+<h2 class="font-headline-md text-headline-md text-on-surface text-lg">Problem Statement</h2>
+</div>
+<p class="font-body-base text-body-base text-on-surface-variant leading-relaxed max-w-3xl">
+                        Current data synchronization across disparate microservices introduces a 400ms latency overhead, directly impacting real-time analytics dashboard accuracy. 
+                        The proposed Nexus orchestration engine aims to unify event streaming patterns to reduce latency to &lt;50ms while ensuring eventual consistency across all domain aggregates.
+                    </p>
+</div>
+<!-- User Stories -->
+<div class="flex-1 bg-surface-container-lowest/80 backdrop-blur-sm rounded-xl p-6 border border-outline-variant/20 flex flex-col">
+<div class="flex items-center justify-between mb-6">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary">view_list</span>
+<h2 class="font-headline-md text-headline-md text-on-surface text-lg">Core User Stories</h2>
+</div>
+<span class="font-code-sm text-code-sm text-on-surface-variant bg-surface-container px-2 py-1 rounded">Generated: 12</span>
+</div>
+<div class="flex flex-col gap-3 overflow-y-auto pr-2 flex-1">
+<!-- Story Card -->
+<div class="p-4 rounded-lg bg-surface border border-outline-variant/30 hover:border-outline-variant/60 transition-colors flex gap-4">
+<div class="mt-1">
+<span class="material-symbols-outlined text-secondary text-sm">person</span>
+</div>
+<div>
+<div class="font-code-sm text-code-sm text-outline mb-1">US-101</div>
+<p class="font-body-base text-body-base text-on-surface">As a Data Engineer, I want to configure event routing rules via a declarative syntax so that I can manage data flow without modifying core service code.</p>
+<div class="flex gap-2 mt-3">
+<span class="px-2 py-0.5 rounded bg-surface-container-highest text-on-surface-variant font-code-sm text-[10px] uppercase">Routing</span>
+<span class="px-2 py-0.5 rounded bg-surface-container-highest text-on-surface-variant font-code-sm text-[10px] uppercase">Config</span>
+</div>
+</div>
+</div>
+<!-- Story Card -->
+<div class="p-4 rounded-lg bg-surface border border-outline-variant/30 hover:border-outline-variant/60 transition-colors flex gap-4">
+<div class="mt-1">
+<span class="material-symbols-outlined text-secondary text-sm">person</span>
+</div>
+<div>
+<div class="font-code-sm text-code-sm text-outline mb-1">US-102</div>
+<p class="font-body-base text-body-base text-on-surface">As a System Administrator, I need real-time observability into dead-letter queues to quickly identify and replay failed event deliveries.</p>
+<div class="flex gap-2 mt-3">
+<span class="px-2 py-0.5 rounded bg-surface-container-highest text-on-surface-variant font-code-sm text-[10px] uppercase">Monitoring</span>
+<span class="px-2 py-0.5 rounded bg-surface-container-highest text-on-surface-variant font-code-sm text-[10px] uppercase">Resilience</span>
+</div>
+</div>
+</div>
+<!-- Story Card -->
+<div class="p-4 rounded-lg bg-surface border border-outline-variant/30 hover:border-outline-variant/60 transition-colors flex gap-4">
+<div class="mt-1">
+<span class="material-symbols-outlined text-secondary text-sm">person</span>
+</div>
+<div>
+<div class="font-code-sm text-code-sm text-outline mb-1">US-103</div>
+<p class="font-body-base text-body-base text-on-surface">As an Analytics Consumer, I want a unified GraphQL endpoint to query aggregated states without needing to know the underlying event topic structure.</p>
+<div class="flex gap-2 mt-3">
+<span class="px-2 py-0.5 rounded bg-surface-container-highest text-on-surface-variant font-code-sm text-[10px] uppercase">API</span>
+<span class="px-2 py-0.5 rounded bg-surface-container-highest text-on-surface-variant font-code-sm text-[10px] uppercase">GraphQL</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Right Column: Features -->
+<div class="xl:col-span-4 flex flex-col gap-gutter bg-surface-container-lowest/50 rounded-xl border border-outline-variant/20 p-4">
+<div class="flex items-center gap-2 mb-2 px-2">
+<span class="material-symbols-outlined text-primary-fixed">extension</span>
+<h2 class="font-headline-md text-headline-md text-on-surface text-lg">Proposed Features</h2>
+</div>
+<!-- Feature Grid -->
+<div class="grid grid-cols-1 gap-3">
+<!-- Feature Card 1 -->
+<div class="p-4 rounded-lg bg-surface-container-low border border-outline-variant/30 hover:bg-surface-container transition-colors relative overflow-hidden group">
+<div class="flex justify-between items-start mb-3">
+<div class="w-8 h-8 rounded bg-surface-container-highest flex items-center justify-center border border-outline-variant/50">
+<span class="material-symbols-outlined text-on-surface text-sm">hub</span>
+</div>
+<span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded bg-error/10 text-error border border-error/20 font-label-caps text-label-caps">
+<span class="w-1.5 h-1.5 rounded-full bg-error shadow-[0_0_4px_currentColor]"></span> P0
+                            </span>
+</div>
+<h3 class="font-code-sm text-code-sm text-on-surface font-semibold mb-1">Unified Event Bus</h3>
+<p class="font-body-base text-[13px] text-on-surface-variant line-clamp-2">Kafka-based distributed ledger ensuring ordered, persistent message delivery across regions.</p>
+</div>
+<!-- Feature Card 2 -->
+<div class="p-4 rounded-lg bg-surface-container-low border border-outline-variant/30 hover:bg-surface-container transition-colors relative overflow-hidden group">
+<div class="flex justify-between items-start mb-3">
+<div class="w-8 h-8 rounded bg-surface-container-highest flex items-center justify-center border border-outline-variant/50">
+<span class="material-symbols-outlined text-on-surface text-sm">schema</span>
+</div>
+<span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded bg-error/10 text-error border border-error/20 font-label-caps text-label-caps">
+<span class="w-1.5 h-1.5 rounded-full bg-error shadow-[0_0_4px_currentColor]"></span> P0
+                            </span>
+</div>
+<h3 class="font-code-sm text-code-sm text-on-surface font-semibold mb-1">Dynamic Schema Registry</h3>
+<p class="font-body-base text-[13px] text-on-surface-variant line-clamp-2">Centralized Avro schema management to prevent breaking changes in event payloads.</p>
+</div>
+<!-- Feature Card 3 -->
+<div class="p-4 rounded-lg bg-surface-container-low border border-outline-variant/30 hover:bg-surface-container transition-colors relative overflow-hidden group">
+<div class="flex justify-between items-start mb-3">
+<div class="w-8 h-8 rounded bg-surface-container-highest flex items-center justify-center border border-outline-variant/50">
+<span class="material-symbols-outlined text-on-surface text-sm">query_stats</span>
+</div>
+<span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded bg-tertiary/10 text-tertiary border border-tertiary/20 font-label-caps text-label-caps">
+<span class="w-1.5 h-1.5 rounded-full bg-tertiary shadow-[0_0_4px_currentColor]"></span> P1
+                            </span>
+</div>
+<h3 class="font-code-sm text-code-sm text-on-surface font-semibold mb-1">Materialized Views</h3>
+<p class="font-body-base text-[13px] text-on-surface-variant line-clamp-2">Pre-computed query results updated continuously to serve analytics dashboards instantly.</p>
+</div>
+<!-- Feature Card 4 -->
+<div class="p-4 rounded-lg bg-surface-container-low border border-outline-variant/30 hover:bg-surface-container transition-colors relative overflow-hidden group">
+<div class="flex justify-between items-start mb-3">
+<div class="w-8 h-8 rounded bg-surface-container-highest flex items-center justify-center border border-outline-variant/50">
+<span class="material-symbols-outlined text-on-surface text-sm">security</span>
+</div>
+<span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded bg-primary/10 text-primary border border-primary/20 font-label-caps text-label-caps">
+<span class="w-1.5 h-1.5 rounded-full bg-primary opacity-50"></span> P2
+                            </span>
+</div>
+<h3 class="font-code-sm text-code-sm text-on-surface font-semibold mb-1">RBAC Event Filtering</h3>
+<p class="font-body-base text-[13px] text-on-surface-variant line-clamp-2">Attribute-based access control embedded at the consumer group level.</p>
+</div>
+</div>
+</div>
+</div>
+</main>
+</body></html>

@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>OrkestrAI - New Project</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&amp;family=JetBrains+Mono:wght@400;600&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "tertiary-fixed-dim": "#4edea3",
+                        "surface-container-highest": "#35343a",
+                        "on-secondary-container": "#c4abff",
+                        "primary": "#89ceff",
+                        "on-surface": "#e4e1e9",
+                        "error-container": "#93000a",
+                        "outline-variant": "#3e4850",
+                        "error": "#ffb4ab",
+                        "on-tertiary-fixed-variant": "#005236",
+                        "surface-dim": "#131318",
+                        "on-primary-fixed": "#001e2f",
+                        "tertiary-fixed": "#6ffbbe",
+                        "secondary-fixed": "#e9ddff",
+                        "on-error-container": "#ffdad6",
+                        "surface-variant": "#35343a",
+                        "on-secondary-fixed": "#23005c",
+                        "on-tertiary-container": "#003b26",
+                        "primary-fixed": "#c9e6ff",
+                        "surface": "#131318",
+                        "outline": "#88929b",
+                        "tertiary-container": "#00b17b",
+                        "on-primary-fixed-variant": "#004c6e",
+                        "background": "#0a0a0f",
+                        "on-error": "#690005",
+                        "secondary-container": "#571bc1",
+                        "on-secondary-fixed-variant": "#5516be",
+                        "surface-container-low": "#1b1b20",
+                        "primary-fixed-dim": "#89ceff",
+                        "on-surface-variant": "#bec8d2",
+                        "on-primary": "#00344d",
+                        "secondary-fixed-dim": "#d0bcff",
+                        "inverse-on-surface": "#303036",
+                        "surface-container-high": "#2a292f",
+                        "on-secondary": "#3c0091",
+                        "inverse-primary": "#006591",
+                        "primary-container": "#0ea5e9",
+                        "secondary": "#d0bcff",
+                        "surface-container": "#1f1f25",
+                        "tertiary": "#4edea3",
+                        "inverse-surface": "#e4e1e9",
+                        "on-background": "#e4e1e9",
+                        "on-primary-container": "#003751",
+                        "surface-tint": "#89ceff",
+                        "surface-bright": "#39383e",
+                        "surface-container-lowest": "#0e0e13",
+                        "on-tertiary": "#003824",
+                        "on-tertiary-fixed": "#002113"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    "spacing": {
+                        "margin": "24px",
+                        "inspector-width": "320px",
+                        "unit": "4px",
+                        "sidebar-width": "260px",
+                        "gutter": "16px"
+                    },
+                    "fontFamily": {
+                        "code-sm": ["JetBrains Mono"],
+                        "label-caps": ["JetBrains Mono"],
+                        "headline-md": ["Inter"],
+                        "body-base": ["Inter"],
+                        "display-lg": ["Inter"]
+                    },
+                    "fontSize": {
+                        "code-sm": ["13px", {"lineHeight": "18px", "fontWeight": "400"}],
+                        "label-caps": ["11px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600"}],
+                        "headline-md": ["24px", {"lineHeight": "32px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                        "body-base": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                        "display-lg": ["48px", {"lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700"}]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        .neon-focus:focus {
+            box-shadow: 0 0 12px rgba(137, 206, 255, 0.4);
+            border-color: #89ceff;
+            outline: none;
+        }
+        .pulse-glow {
+            animation: pulse-glow 2s infinite alternate;
+        }
+        @keyframes pulse-glow {
+            0% { box-shadow: 0 0 5px rgba(137, 206, 255, 0.2); }
+            100% { box-shadow: 0 0 20px rgba(137, 206, 255, 0.6); }
+        }
+        
+        /* Custom Scrollbar for dark theme */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0a0a0f;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #3e4850;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #88929b;
+        }
+    </style>
+</head>
+<body class="bg-background text-on-background min-h-screen flex flex-col font-body-base overflow-x-hidden selection:bg-primary-container selection:text-on-primary-container">
+<!-- TopAppBar -->
+<header class="fixed top-0 w-full z-50 bg-[#0a0a0f]/80 backdrop-blur-xl border-b border-outline-variant/30 flex items-center justify-between px-margin h-16 w-full">
+<div class="flex items-center space-x-gutter">
+<span class="font-display-lg text-headline-md tracking-tighter text-primary">OrkestrAI</span>
+<nav class="hidden md:flex items-center space-x-gutter ml-8">
+<a class="text-on-surface-variant hover:text-primary transition-colors duration-200 font-body-base text-body-base" href="#">Dashboard</a>
+<a class="text-primary border-b-2 border-primary pb-1 font-body-base text-body-base" href="#">Projects</a>
+<a class="text-on-surface-variant hover:text-primary transition-colors duration-200 font-body-base text-body-base" href="#">Registry</a>
+<a class="text-on-surface-variant hover:text-primary transition-colors duration-200 font-body-base text-body-base" href="#">Nodes</a>
+</nav>
+</div>
+<div class="flex items-center space-x-gutter">
+<button class="text-on-surface hover:text-primary transition-colors duration-200 hover:scale-95">
+<span class="material-symbols-outlined" data-icon="notifications">notifications</span>
+</button>
+<button class="text-on-surface hover:text-primary transition-colors duration-200 hover:scale-95">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+</button>
+<div class="w-8 h-8 rounded-full bg-surface-container-high border border-outline-variant/50 overflow-hidden ml-4">
+<img alt="User profile" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuB5DyhKAsbzCIeGnVCKXLLz3PA1_xFVdmzwgZPe_SYuKhaJxB_GqDxHYfBrZgCcPj76YkCIH8-TbxfZDbunR-bDgNQphj9OV01mVreaOTebVC45IPn1OloMmrOp-7BG_ItHtMvwP8Bz4Vx-KOtcx236groqwA5GpfUNHiRPjaTMtgDyu7o5_jdnMtWv1Lb7NIkqtqLs4sSN_K2vmt-njFChj-NmA74PJqgQEfaEZ_SVXuTHHs1NROkP5ZHCR6bpgSJQ7ZR8Ea3PP-Hx"/>
+</div>
+</div>
+</header>
+<!-- SideNavBar -->
+<aside class="hidden md:flex fixed left-0 top-16 h-[calc(100vh-64px)] w-sidebar-width bg-[#0a0a0f]/90 backdrop-blur-lg border-r border-outline-variant/20 flex-col py-gutter space-y-unit z-40">
+<div class="px-gutter mb-6 flex items-center space-x-3">
+<div class="w-10 h-10 rounded-lg bg-secondary-container flex items-center justify-center">
+<span class="material-symbols-outlined text-on-secondary-container" data-icon="hub">hub</span>
+</div>
+<div>
+<h2 class="font-label-caps text-label-caps text-on-surface">Agent Hive</h2>
+<p class="font-code-sm text-code-sm text-on-surface-variant/70">5 Agents Active</p>
+</div>
+</div>
+<div class="px-gutter mb-6">
+<button class="w-full bg-surface-container-high border border-outline-variant/30 text-on-surface font-body-base text-body-base py-2 rounded-lg flex items-center justify-center space-x-2 hover:bg-surface-container-highest transition-colors">
+<span class="material-symbols-outlined text-[18px]" data-icon="add">add</span>
+<span>Deploy New Agent</span>
+</button>
+</div>
+<nav class="flex-1 flex flex-col space-y-1 px-2">
+<a class="text-on-surface-variant hover:bg-surface-container-highest transition-all flex items-center space-x-3 px-3 py-2 rounded-md font-code-sm text-code-sm" href="#">
+<span class="material-symbols-outlined text-[18px]" data-icon="psychology">psychology</span>
+<span>Strategy</span>
+</a>
+<a class="bg-secondary-container/30 text-secondary border-r-2 border-secondary flex items-center space-x-3 px-3 py-2 rounded-md font-code-sm text-code-sm translate-x-1" href="#">
+<span class="material-symbols-outlined text-[18px]" data-icon="architecture">architecture</span>
+<span>Architect</span>
+</a>
+<a class="text-on-surface-variant hover:bg-surface-container-highest transition-all flex items-center space-x-3 px-3 py-2 rounded-md font-code-sm text-code-sm" href="#">
+<span class="material-symbols-outlined text-[18px]" data-icon="build">build</span>
+<span>Builder</span>
+</a>
+<a class="text-on-surface-variant hover:bg-surface-container-highest transition-all flex items-center space-x-3 px-3 py-2 rounded-md font-code-sm text-code-sm" href="#">
+<span class="material-symbols-outlined text-[18px]" data-icon="fact_check">fact_check</span>
+<span>QA</span>
+</a>
+<a class="text-on-surface-variant hover:bg-surface-container-highest transition-all flex items-center space-x-3 px-3 py-2 rounded-md font-code-sm text-code-sm" href="#">
+<span class="material-symbols-outlined text-[18px]" data-icon="rocket_launch">rocket_launch</span>
+<span>Deploy</span>
+</a>
+</nav>
+<div class="mt-auto px-2 flex flex-col space-y-1">
+<a class="text-on-surface-variant hover:bg-surface-container-highest transition-all flex items-center space-x-3 px-3 py-2 rounded-md font-code-sm text-code-sm" href="#">
+<span class="material-symbols-outlined text-[18px]" data-icon="menu_book">menu_book</span>
+<span>Documentation</span>
+</a>
+<a class="text-on-surface-variant hover:bg-surface-container-highest transition-all flex items-center space-x-3 px-3 py-2 rounded-md font-code-sm text-code-sm" href="#">
+<span class="material-symbols-outlined text-[18px]" data-icon="contact_support">contact_support</span>
+<span>Support</span>
+</a>
+</div>
+</aside>
+<!-- Main Content -->
+<main class="flex-1 md:ml-[260px] pt-16 px-margin py-margin relative">
+<!-- Abstract Background Glow -->
+<div class="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[400px] bg-primary/5 rounded-full blur-[120px] pointer-events-none -z-10"></div>
+<div class="max-w-4xl mx-auto space-y-8">
+<!-- Header Section -->
+<div class="space-y-2">
+<h1 class="font-headline-md text-headline-md text-on-surface flex items-center space-x-3">
+<span class="material-symbols-outlined text-primary" data-icon="add_circle">add_circle</span>
+<span>Initialize Project</span>
+</h1>
+<p class="font-body-base text-body-base text-on-surface-variant max-w-2xl">Define the core parameters for your new orchestration environment. The AI agent swarm will configure resources based on these inputs.</p>
+</div>
+<!-- Main Input Form -->
+<div class="bg-surface-container-low/50 backdrop-blur-md border border-outline-variant/30 rounded-xl p-6 space-y-6">
+<!-- Project Name -->
+<div class="space-y-2">
+<label class="font-label-caps text-label-caps text-on-surface-variant block uppercase tracking-wider" for="projectName">Project Identity</label>
+<input class="w-full bg-surface-dim border border-outline-variant/50 text-on-surface font-code-sm text-code-sm rounded-lg px-4 py-3 placeholder-on-surface-variant/40 transition-all neon-focus focus:ring-0" id="projectName" placeholder="e.g., Nexus-Core-Alpha" type="text"/>
+</div>
+<!-- Project Description -->
+<div class="space-y-2">
+<label class="font-label-caps text-label-caps text-on-surface-variant block uppercase tracking-wider" for="projectDesc">Operational Directives</label>
+<textarea class="w-full bg-surface-dim border border-outline-variant/50 text-on-surface font-body-base text-body-base rounded-lg px-4 py-3 placeholder-on-surface-variant/40 transition-all neon-focus focus:ring-0 resize-y" id="projectDesc" placeholder="Describe the primary goal, architecture needs, and data flows..." rows="4"></textarea>
+</div>
+</div>
+<!-- Example Prompt Cards (Bento Grid Style) -->
+<div class="space-y-3">
+<span class="font-label-caps text-label-caps text-on-surface-variant uppercase tracking-wider px-1">Or Select a Blueprint Template</span>
+<div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+<button class="text-left bg-surface-container/40 hover:bg-surface-container border border-outline-variant/20 hover:border-primary/50 rounded-lg p-4 transition-all group flex flex-col h-full">
+<div class="flex items-center space-x-2 mb-3">
+<span class="material-symbols-outlined text-tertiary text-[20px]" data-icon="database">database</span>
+<span class="font-code-sm text-code-sm text-on-surface font-semibold">Data Pipeline</span>
+</div>
+<p class="font-body-base text-body-base text-on-surface-variant/80 group-hover:text-on-surface-variant transition-colors text-sm flex-1">ETL orchestration with distributed worker nodes and Postgres persistence.</p>
+</button>
+<button class="text-left bg-surface-container/40 hover:bg-surface-container border border-outline-variant/20 hover:border-primary/50 rounded-lg p-4 transition-all group flex flex-col h-full">
+<div class="flex items-center space-x-2 mb-3">
+<span class="material-symbols-outlined text-secondary text-[20px]" data-icon="api">api</span>
+<span class="font-code-sm text-code-sm text-on-surface font-semibold">Microservice Mesh</span>
+</div>
+<p class="font-body-base text-body-base text-on-surface-variant/80 group-hover:text-on-surface-variant transition-colors text-sm flex-1">REST/GraphQL gateway mapping to containerized autonomous agents.</p>
+</button>
+<button class="text-left bg-surface-container/40 hover:bg-surface-container border border-outline-variant/20 hover:border-primary/50 rounded-lg p-4 transition-all group flex flex-col h-full">
+<div class="flex items-center space-x-2 mb-3">
+<span class="material-symbols-outlined text-error text-[20px]" data-icon="memory">memory</span>
+<span class="font-code-sm text-code-sm text-on-surface font-semibold">LLM Inference Node</span>
+</div>
+<p class="font-body-base text-body-base text-on-surface-variant/80 group-hover:text-on-surface-variant transition-colors text-sm flex-1">High-GPU provisioned environment for serving custom foundation models.</p>
+</button>
+</div>
+</div>
+<!-- Collapsible Preferences -->
+<details class="group bg-surface-container-low border border-outline-variant/20 rounded-xl overflow-hidden [&amp;_summary::-webkit-details-marker]:hidden">
+<summary class="flex items-center justify-between px-6 py-4 cursor-pointer hover:bg-surface-container-highest/50 transition-colors">
+<div class="flex items-center space-x-3">
+<span class="material-symbols-outlined text-on-surface-variant group-open:text-primary transition-colors" data-icon="tune">tune</span>
+<span class="font-body-base text-body-base font-semibold text-on-surface">Advanced Configuration</span>
+</div>
+<span class="material-symbols-outlined text-on-surface-variant group-open:rotate-180 transition-transform" data-icon="expand_more">expand_more</span>
+</summary>
+<div class="px-6 py-4 border-t border-outline-variant/20 bg-surface-dim/30 space-y-6">
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+<!-- Tech Stack -->
+<div class="space-y-2">
+<label class="font-label-caps text-label-caps text-on-surface-variant block">Primary Runtime</label>
+<select class="w-full bg-surface border border-outline-variant/50 text-on-surface font-code-sm text-code-sm rounded-lg px-3 py-2 appearance-none focus:ring-1 focus:ring-primary focus:border-primary outline-none">
+<option>Node.js (v20 LTS)</option>
+<option>Python (3.11)</option>
+<option>Go (1.21)</option>
+<option>Rust (1.75)</option>
+</select>
+</div>
+<!-- Deployment Target -->
+<div class="space-y-2">
+<label class="font-label-caps text-label-caps text-on-surface-variant block">Cluster Target</label>
+<select class="w-full bg-surface border border-outline-variant/50 text-on-surface font-code-sm text-code-sm rounded-lg px-3 py-2 appearance-none focus:ring-1 focus:ring-primary focus:border-primary outline-none">
+<option>US-East (Virginia) - AWS</option>
+<option>EU-Central (Frankfurt) - AWS</option>
+<option>Global Edge Network</option>
+</select>
+</div>
+</div>
+<!-- Toggle Switches -->
+<div class="flex flex-col space-y-4 pt-2">
+<label class="flex items-center justify-between cursor-pointer group/toggle">
+<div class="flex items-center space-x-3">
+<span class="material-symbols-outlined text-on-surface-variant text-[20px]" data-icon="lock">lock</span>
+<div>
+<span class="font-body-base text-body-base text-on-surface block">Strict IAM Policies</span>
+<span class="font-code-sm text-code-sm text-on-surface-variant/70">Enforce least-privilege role generation.</span>
+</div>
+</div>
+<div class="relative inline-flex items-center">
+<input checked="" class="sr-only peer" type="checkbox"/>
+<div class="w-11 h-6 bg-surface-container-highest peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-on-surface after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+</div>
+</label>
+<label class="flex items-center justify-between cursor-pointer group/toggle">
+<div class="flex items-center space-x-3">
+<span class="material-symbols-outlined text-on-surface-variant text-[20px]" data-icon="monitor_heart">monitor_heart</span>
+<div>
+<span class="font-body-base text-body-base text-on-surface block">Enhanced Telemetry</span>
+<span class="font-code-sm text-code-sm text-on-surface-variant/70">Inject OpenTelemetry tracing into all nodes.</span>
+</div>
+</div>
+<div class="relative inline-flex items-center">
+<input class="sr-only peer" type="checkbox"/>
+<div class="w-11 h-6 bg-surface-container-highest peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-on-surface after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+</div>
+</label>
+</div>
+</div>
+</details>
+<!-- Action Bar -->
+<div class="pt-6 flex justify-end">
+<button class="bg-primary text-on-primary font-body-base text-body-base font-semibold py-3 px-8 rounded-lg flex items-center space-x-2 pulse-glow hover:bg-primary-fixed-dim transition-colors">
+<span>Start Orchestration</span>
+<span class="material-symbols-outlined text-[20px]" data-icon="arrow_forward">arrow_forward</span>
+</button>
+</div>
+</div>
+</main>
+</body></html>
