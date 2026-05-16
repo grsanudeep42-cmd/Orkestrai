@@ -211,20 +211,38 @@ This project includes comprehensive planning documentation:
 - Judge talking points
 - Slide deck outline
 
-## 🚀 Quick Start
+## 🚀 Quick Start (Docker - Recommended)
 
-**See [QUICKSTART.md](QUICKSTART.md) for detailed setup instructions.**
-
-### TL;DR
+The fastest way to get OrkestrAI running is using Docker Compose.
 
 ```bash
-# Backend
+# 1. Clone the repository
+git clone https://github.com/your-repo/orkstrai.git
+cd orkstrai
+
+# 2. Configure environment (add your API keys)
+# Edit backend/.env and add your GROQ_API_KEY or GEMINI_API_KEY
+
+# 3. Start everything
+docker-compose up --build
+```
+
+Visit `http://localhost:3000` to see the application.
+
+### Manual Setup (Without Docker)
+
+If you prefer to run services manually:
+
+#### Backend
+```bash
 cd backend
 pip install -r requirements.txt
-# Configure .env with database and watsonx credentials
+# Configure .env with database and AI API keys
 uvicorn app.main:app --reload
+```
 
-# Frontend (new terminal)
+#### Frontend
+```bash
 cd frontend
 npm install
 # Configure .env.local with API URLs

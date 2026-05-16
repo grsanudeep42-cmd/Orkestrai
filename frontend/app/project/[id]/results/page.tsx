@@ -3,12 +3,13 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Download, CheckCircle2, AlertCircle, Loader2, FileText, Code, FileJson, GitBranch as Github } from "lucide-react";
+import { ArrowLeft, Download, CheckCircle2, AlertCircle, Loader2, FileText, Code, FileJson, GitBranch } from "lucide-react";
 import { apiClient } from "@/lib/api/client";
 import { Project, GeneratedArtifact } from "@/types";
 import { formatDistanceToNow } from "date-fns";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import CodeFilesView from "@/components/CodeFilesView";
 
 const parseUTCDate = (dateString: string | undefined | null) => {
   if (!dateString) return new Date();
@@ -35,41 +36,98 @@ const ArtifactRenderer = ({ type, content }: { type: string; content: string }) 
 
   // If it's a known structured agent that outputs URLs/JSON, render custom
   if (isJson) {
-    if (type === "implementation_plan" && data.zip_path) {
+    if (type === "implementation_plan" && (data.zip_path || data.files)) {
+      const zipUrl = data.zip_url ? `http://localhost:8000${data.zip_url}` : undefined;
       return (
-        <div className="space-y-4">
-          <div className="bg-surface border border-border p-6 rounded-lg text-center space-y-4">
-            <Code className="w-12 h-12 text-warning mx-auto" />
-            <h3 className="text-xl font-bold text-foreground">Code Generated Successfully</h3>
-            <p className="text-muted-foreground">{data.files_generated} files generated and packaged.</p>
-            <a href={`http://localhost:8000${data.zip_url}`} download className="inline-flex items-center space-x-2 bg-warning text-background px-6 py-3 rounded-md font-bold hover:bg-warning/90 transition-colors">
-              <Download className="w-5 h-5" />
-              <span>Download ZIP Source Code</span>
-            </a>
+        <div className="space-y-6">
+          <div className="bg-surface border border-border p-6 rounded-lg">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center space-x-3">
+                <Code className="w-8 h-8 text-warning" />
+                <div>
+                  <h3 className="text-xl font-bold text-foreground">Codebase Generated</h3>
+                  <p className="text-sm text-muted-foreground">{data.files_generated || (data.files?.length || 0)} files created</p>
+                </div>
+              </div>
+              {zipUrl && (
+                <a href={zipUrl} download className="inline-flex items-center space-x-2 bg-warning text-background px-4 py-2 rounded-md font-bold hover:bg-warning/90 transition-colors text-sm">
+                  <Download className="w-4 h-4" />
+                  <span>Download ZIP</span>
+                </a>
+              )}
+            </div>
+            
+            <CodeFilesView files={data.files || []} zipUrl={zipUrl} />
           </div>
-          <div className="mt-4 p-4 bg-muted/20 border border-border rounded-lg">
-            <h4 className="font-bold text-foreground mb-2">Build Log</h4>
-            <pre className="font-mono text-xs text-muted-foreground whitespace-pre-wrap">{data.message}</pre>
+          
+          <div className="p-4 bg-muted/10 border border-border rounded-lg">
+            <h4 className="font-bold text-foreground mb-2 text-sm flex items-center space-x-2">
+              <FileText className="w-4 h-4" />
+              <span>Generation Logs</span>
+            </h4>
+            <pre className="font-mono text-[10px] text-muted-foreground whitespace-pre-wrap max-h-40 overflow-y-auto">{data.message}</pre>
           </div>
         </div>
       );
     }
     
-    if (type === "github_setup" && data.repository_url) {
+    if (type === "github_setup") {
+      const isPending = !data.repository_url || data.repository_url.includes("setup-pending");
+      
       return (
-        <div className="space-y-4">
+        <div className="space-y-6">
           <div className="bg-surface border border-border p-6 rounded-lg text-center space-y-4">
-            <Github className="w-12 h-12 text-success mx-auto" />
-            <h3 className="text-xl font-bold text-foreground">GitHub Repository Created</h3>
-            <p className="text-muted-foreground">The generated code has been pushed to your new repository.</p>
-            <a href={data.repository_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center space-x-2 bg-success text-background px-6 py-3 rounded-md font-bold hover:bg-success/90 transition-colors">
-              <Github className="w-5 h-5" />
-              <span>View Repository on GitHub</span>
-            </a>
+            <GitBranch className="w-12 h-12 text-success mx-auto" />
+            {isPending ? (
+              <>
+                <h3 className="text-xl font-bold text-foreground">GitHub Setup Recommended</h3>
+                <p className="text-muted-foreground">GitHub token not configured. Below are the recommended workflows and issues for your manual setup.</p>
+              </>
+            ) : (
+              <>
+                <h3 className="text-xl font-bold text-foreground">GitHub Repository Created</h3>
+                <p className="text-muted-foreground">The generated code has been pushed to your new repository.</p>
+                <a href={data.repository_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center space-x-2 bg-success text-background px-6 py-3 rounded-md font-bold hover:bg-success/90 transition-colors">
+                  <GitBranch className="w-5 h-5" />
+                  <span>View Repository on GitHub</span>
+                </a>
+              </>
+            )}
           </div>
-          <div className="mt-4 p-4 bg-muted/20 border border-border rounded-lg">
-            <h4 className="font-bold text-foreground mb-2">GitHub Operations Log</h4>
-            <pre className="font-mono text-xs text-muted-foreground whitespace-pre-wrap">{data.message}</pre>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="p-4 bg-muted/10 border border-border rounded-lg">
+              <h4 className="font-bold text-foreground mb-3 flex items-center space-x-2">
+                <GitBranch className="w-4 h-4 text-primary" />
+                <span>Workflows Recommended</span>
+              </h4>
+              <ul className="space-y-2">
+                {data.workflows_created > 0 ? (
+                  <li className="text-sm text-muted-foreground flex items-center space-x-2">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-success" />
+                    <span>{data.workflows_created} CI/CD workflows created</span>
+                  </li>
+                ) : (
+                  <li className="text-sm text-muted-foreground">CI/CD workflows defined for manual setup</li>
+                )}
+                <li className="text-sm text-muted-foreground flex items-center space-x-2">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-success" />
+                  <span>Branching strategy: {data.branch_strategy?.main_branch} & {data.branch_strategy?.development_branch}</span>
+                </li>
+              </ul>
+            </div>
+            <div className="p-4 bg-muted/10 border border-border rounded-lg">
+              <h4 className="font-bold text-foreground mb-3 flex items-center space-x-2">
+                <AlertCircle className="w-4 h-4 text-warning" />
+                <span>Issues & Roadmap</span>
+              </h4>
+              <p className="text-sm text-muted-foreground">{data.issues_created || 0} issues planned and documented in the project backlog.</p>
+            </div>
+          </div>
+
+          <div className="p-4 bg-muted/5 border border-border rounded-lg">
+            <h4 className="font-bold text-foreground mb-2 text-sm">GitHub Operations Log</h4>
+            <pre className="font-mono text-[10px] text-muted-foreground whitespace-pre-wrap max-h-40 overflow-y-auto">{data.message || "Ready for integration."}</pre>
           </div>
         </div>
       );
@@ -177,9 +235,9 @@ export default function ResultsPage() {
       case "architecture":
         return "🏗️";
       case "implementation_plan":
-        return "⚡";
+        return <Code className="w-5 h-5" />;
       case "github_setup":
-        return "🔀";
+        return <GitBranch className="w-5 h-5" />;
       case "pitch_deck":
         return "✨";
       case "code":
@@ -198,7 +256,7 @@ export default function ResultsPage() {
       case "architecture":
         return "System Architecture";
       case "implementation_plan":
-        return "Builder Artifacts";
+        return "Generated Code";
       case "github_setup":
         return "GitHub Setup";
       case "pitch_deck":
