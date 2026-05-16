@@ -68,7 +68,7 @@ OrkestrAI provides an AI-powered team of specialized agents that collaborate to:
 - ✅ Analyze errors and suggest fixes
 - ✅ Generate pitch materials for demos
 
-## 🤖 AI Agents (All 5 Implemented!)
+## 🤖 AI Agents (All 6 Implemented!)
 
 ### 1. Product Strategy Agent ✅
 - Understands project goals and target users
@@ -122,7 +122,7 @@ OrkestrAI provides an AI-powered team of specialized agents that collaborate to:
 ## 🛠️ Tech Stack
 
 ### Frontend
-- **Framework**: Next.js 14 (App Router)
+- **Framework**: Next.js 15 (App Router)
 - **Styling**: Tailwind CSS
 - **State Management**: Zustand
 - **Real-time**: WebSocket
@@ -147,42 +147,33 @@ OrkestrAI provides an AI-powered team of specialized agents that collaborate to:
 orkstrai/
 ├── backend/                 # FastAPI backend
 │   ├── app/
-│   │   ├── agents/         # CrewAI agents
+│   │   ├── agents/         # AI agents
 │   │   ├── api/            # API endpoints
 │   │   ├── db/             # Database models
-│   │   ├── services/       # Business logic
+│   │   ├── schemas/        # Pydantic models
 │   │   └── main.py         # Entry point
 │   └── requirements.txt
 │
 ├── frontend/               # Next.js frontend
-│   ├── src/
-│   │   ├── app/           # Pages (App Router)
-│   │   ├── components/    # React components
-│   │   ├── lib/           # Utilities & stores
-│   │   └── hooks/         # Custom hooks
+│   ├── app/               # Pages (App Router)
+│   ├── components/        # React components
+│   ├── lib/               # Utilities & API client
 │   └── package.json
 │
-└── docs/                   # Planning documents
-    ├── ORCHESTRAI_ARCHITECTURE.md
-    ├── BACKEND_STRUCTURE.md
-    ├── FRONTEND_ARCHITECTURE.md
-    ├── CREWAI_IMPLEMENTATION.md
-    ├── GITHUB_INTEGRATION.md
-    ├── HACKATHON_TIMELINE.md
-    └── IMPLEMENTATION_GUIDE.md
+└── assets/                 # UI designs and workflow docs
 ```
 
 ## 📚 Planning Documents
 
 This project includes comprehensive planning documentation:
 
-1. **[ORCHESTRAI_ARCHITECTURE.md](ORCHESTRAI_ARCHITECTURE.md)** - Multi-agent workflow, communication architecture, and system design
-2. **[BACKEND_STRUCTURE.md](BACKEND_STRUCTURE.md)** - Backend folder structure, API routes, and database schema
-3. **[FRONTEND_ARCHITECTURE.md](FRONTEND_ARCHITECTURE.md)** - Frontend components, state management, and UI design
-4. **[CREWAI_IMPLEMENTATION.md](CREWAI_IMPLEMENTATION.md)** - CrewAI agent configurations and tools
-5. **[GITHUB_INTEGRATION.md](GITHUB_INTEGRATION.md)** - GitHub OAuth and API integration workflow
-6. **[HACKATHON_TIMELINE.md](HACKATHON_TIMELINE.md)** - Hour-by-hour development schedule for 36-48 hour hackathon
-7. **[IMPLEMENTATION_GUIDE.md](IMPLEMENTATION_GUIDE.md)** - Step-by-step implementation instructions
+1. **[ORCHESTRAI_ARCHITECTURE.md](assets/To-do-Workflow/ORCHESTRAI_ARCHITECTURE.md)** - Multi-agent workflow, communication architecture, and system design
+2. **[BACKEND_STRUCTURE.md](assets/To-do-Workflow/BACKEND_STRUCTURE.md)** - Backend folder structure, API routes, and database schema
+3. **[FRONTEND_ARCHITECTURE.md](assets/To-do-Workflow/FRONTEND_ARCHITECTURE.md)** - Frontend components, state management, and UI design
+4. **[CREWAI_IMPLEMENTATION.md](assets/To-do-Workflow/CREWAI_IMPLEMENTATION.md)** - CrewAI agent configurations and tools
+5. **[GITHUB_INTEGRATION.md](assets/To-do-Workflow/GITHUB_INTEGRATION.md)** - GitHub OAuth and API integration workflow
+6. **[HACKATHON_TIMELINE.md](assets/To-do-Workflow/HACKATHON_TIMELINE.md)** - Hour-by-hour development schedule for 36-48 hour hackathon
+7. **[IMPLEMENTATION_GUIDE.md](assets/To-do-Workflow/IMPLEMENTATION_GUIDE.md)** - Step-by-step implementation instructions
 
 ## 🎨 Key Features
 
@@ -200,10 +191,10 @@ This project includes comprehensive planning documentation:
 - Configuration files included
 
 ### GitHub Integration
-- Automatic repository creation
+- Automatic repository creation recommendations
 - Issue generation from features
-- Project board setup
-- Initial code commit
+- Project board setup guidance
+- Initial code commit structure
 
 ### Pitch Materials
 - Elevator pitch generation
@@ -224,7 +215,7 @@ cd orkstrai
 # Edit backend/.env and add your GROQ_API_KEY or GEMINI_API_KEY
 
 # 3. Start everything
-docker-compose up --build
+docker compose up --build
 ```
 
 Visit `http://localhost:3000` to see the application.
