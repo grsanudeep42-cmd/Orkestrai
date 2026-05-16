@@ -4,7 +4,7 @@ export interface Project {
   description?: string;
   user_input: string;
   status: "orchestrating" | "completed" | "failed";
-  preferences?: Record<string, any>;
+  preferences?: Record<string, unknown>;
   created_at: string;
   updated_at: string;
   completed_at?: string;
@@ -15,7 +15,7 @@ export interface ProjectCreate {
   name: string;
   description?: string;
   user_input: string;
-  preferences?: Record<string, any>;
+  preferences?: Record<string, unknown>;
 }
 
 export interface AgentLog {
@@ -28,9 +28,9 @@ export interface AgentLog {
   completed_at?: string;
   duration_ms?: number;
   output_preview?: string;
-  full_output?: Record<string, any>;
+  full_output?: Record<string, unknown>;
   error_details?: string;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
 export interface OrchestrationStatus {
@@ -44,11 +44,13 @@ export interface OrchestrationStatus {
 }
 
 export interface WebSocketEvent {
-  type: "agent_start" | "agent_thinking" | "agent_output" | "agent_complete" | "orchestration_complete" | "error" | "connection_established";
+  type: "agent_start" | "agent_thinking" | "agent_output" | "agent_complete" | "orchestration_complete" | "error" | "connection_established" | "agent_critique" | "agent_retry" | "provider_selected" | "provider_fallback" | "memory_updated";
   project_id?: string;
   agent?: string;
+  target_agent?: string;
+  provider?: string;
   message?: string;
-  data?: any;
+  data?: Record<string, unknown>;
   status?: string;
   timestamp?: string;
   duration_ms?: number;
@@ -60,11 +62,11 @@ export interface GeneratedArtifact {
   id: string;
   project_id: string;
   agent_name: string;
-  artifact_type: "code" | "documentation" | "config" | "strategy" | "json" | "other";
+  artifact_type: "strategy" | "architecture" | "implementation_plan" | "github_setup" | "pitch_deck" | "code" | "documentation" | "config" | "json" | "other" | "audit";
   file_path: string;
   content: string;
   created_at: string;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
 // Made with Bob

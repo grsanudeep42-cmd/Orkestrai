@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CodeCollab Presentation</title>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&display=swap">
+    <style>
+        body {
+            font-family: 'Montserrat', sans-serif;
+            background-color: #2f2f2f;
+            color: #fff;
+            margin: 0;
+            padding: 0;
+        }
+        .slide {
+            width: 80%;
+            margin: 40px auto;
+            padding: 20px;
+            background-color: #1a1a1a;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+        }
+        .slide h1 {
+            font-size: 36px;
+            margin-bottom: 10px;
+        }
+        .slide p {
+            font-size: 18px;
+            margin-bottom: 20px;
+        }
+        .slide ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        .slide li {
+            margin-bottom: 10px;
+        }
+        .slide a {
+            text-decoration: none;
+            color: #4CAF50;
+        }
+        .slide a:hover {
+            color: #3e8e41;
+        }
+        .nav {
+            position: fixed;
+            top: 50%;
+            transform: translateY(-50%);
+            cursor: pointer;
+            font-size: 24px;
+            color: #fff;
+        }
+        .nav.left {
+            left: 20px;
+        }
+        .nav.right {
+            right: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="slide" id="slide-1">
+        <h1>CodeCollab</h1>
+        <p>A social platform for developers to share code snippets and collaborate</p>
+    </div>
+    <div class="slide" id="slide-2">
+        <h1>Problem Statement</h1>
+        <p>The lack of a dedicated platform for developers to share and collaborate on code snippets</p>
+        <ul>
+            <li>Developers rely on platforms like GitHub, Stack Overflow, and Reddit</li>
+            <li>75% of developers spend an average of 2 hours per day searching for code snippets and debugging existing code</li>
+        </ul>
+    </div>
+    <div class="slide" id="slide-3">
+        <h1>Market Opportunity</h1>
+        <p>Over 24 million developers worldwide, with a potential user base of 10 million developers (40% of the total developer population)</p>
+        <p>Revenue potential of $100 million per year</p>
+    </div>
+    <div class="slide" id="slide-4">
+        <h1>Solution</h1>
+        <p>CodeCollab provides a seamless experience for developers to connect, share knowledge, and work together on coding projects</p>
+        <p>Features:</p>
+        <ul>
+            <li>Code snippet sharing</li>
+            <li>Collaboration tools</li>
+            <li>Community features</li>
+        </ul>
+    </div>
+    <div class="slide" id="slide-5">
+        <h1>Implementation Results</h1>
+        <p>Code generated: 7 files</p>
+        <p>GitHub Repo: <a href="https://github.com/grsanudeep42-cmd/codecollab-platform-935faf">https://github.com/grsanudeep42-cmd/codecollab-platform-935faf</a></p>
+    </div>
+    <div class="slide" id="slide-6">
+        <h1>Architecture</h1>
+        <p>CodeCollab is built using a microservices architecture, with a focus on scalability and reliability</p>
+        <p>Technologies used:</p>
+        <ul>
+            <li>Frontend: JavaScript, HTML, CSS</li>
+            <li>Backend: Node.js, Express.js</li>
+            <li>Database: MongoDB</li>
+        </ul>
+    </div>
+    <div class="slide" id="slide-7">
+        <h1>Team and Roadmap</h1>
+        <p>Our team consists of experienced developers, designers, and project managers</p>
+        <p>Roadmap:</p>
+        <ul>
+            <li>Q1: Platform development and testing</li>
+            <li>Q2: Launch and marketing</li>
+            <li>Q3: Feature enhancements and community building</li>
+        </ul>
+    </div>
+    <div class="nav left" id="prev" onclick="prevSlide()">&#10094;</div>
+    <div class="nav right" id="next" onclick="nextSlide()">&#10095;</div>
+    <script>
+        let currentSlide = 1;
+        let slides = document.querySelectorAll('.slide');
+        function prevSlide() {
+            if (currentSlide > 1) {
+                currentSlide--;
+                showSlide();
+            }
+        }
+        function nextSlide() {
+            if (currentSlide < slides.length) {
+                currentSlide++;
+                showSlide();
+            }
+        }
+        function showSlide() {
+            for (let i = 0; i < slides.length; i++) {
+                slides[i].style.display = 'none';
+            }
+            slides[currentSlide - 1].style.display = 'block';
+        }
+    </script>
+</body>
+</html>

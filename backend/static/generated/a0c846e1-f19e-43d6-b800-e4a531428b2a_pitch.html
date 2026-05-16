@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CodeCollab - Product Presentation</title>
+  <style>
+    /* Dark theme styles */
+    body {
+      font-family: 'Montserrat', sans-serif;
+      background-color: #1f2023;
+      color: #f4f4f4;
+      margin: 0;
+      padding: 0;
+    }
+
+    .slide {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      padding: 2rem;
+      box-sizing: border-box;
+    }
+
+    .slide h1 {
+      font-size: 3rem;
+      margin-bottom: 1rem;
+    }
+
+    .slide p {
+      font-size: 1.5rem;
+      text-align: center;
+      max-width: 800px;
+    }
+
+    .slide-navigation {
+      position: absolute;
+      bottom: 2rem;
+      width: 100%;
+      display: flex;
+      justify-content: center;
+      gap: 1rem;
+    }
+
+    .slide-navigation button {
+      background-color: #333;
+      color: #f4f4f4;
+      border: none;
+      padding: 0.5rem 1rem;
+      font-size: 1.2rem;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+    }
+
+    .slide-navigation button:hover {
+      background-color: #555;
+    }
+  </style>
+</head>
+<body>
+  <div class="slide">
+    <h1>CodeCollab</h1>
+    <p>A social platform for developers to share code snippets and collaborate</p>
+  </div>
+
+  <div class="slide">
+    <h1>The Problem</h1>
+    <p>Developers currently use a combination of platforms to share code and get feedback, but these platforms are not specifically designed for code collaboration and often lack the features and functionality that developers need.</p>
+  </div>
+
+  <div class="slide">
+    <h1>The Solution</h1>
+    <p>CodeCollab provides a dedicated space for developers to share code snippets, get feedback, and collaborate on open-source projects. The platform offers features such as code editing, version control, and project management tools to streamline the development process.</p>
+  </div>
+
+  <div class="slide">
+    <h1>Architecture</h1>
+    <p>CodeCollab is built using a modern tech stack, including React.js for the front-end, Node.js and Express.js for the back-end, and MongoDB for the database. The platform also integrates with popular code hosting services like GitHub and GitLab to provide seamless collaboration and version control.</p>
+  </div>
+
+  <div class="slide">
+    <h1>Market Opportunity</h1>
+    <p>With an estimated 24.3 million software developers worldwide, and this number expected to grow to 28.7 million by 2024, the market opportunity for CodeCollab is significant. The code collaboration market is also growing, with the global market size expected to reach $1.2 billion by 2025.</p>
+  </div>
+
+  <div class="slide">
+    <h1>Team and Roadmap</h1>
+    <p>The CodeCollab team consists of experienced software engineers and product managers who have a deep understanding of the developer community and its needs. The team is committed to continuously improving the platform and adding new features to enhance the user experience.</p>
+  </div>
+
+  <div class="slide-navigation">
+    <button id="prev-slide">Previous</button>
+    <button id="next-slide">Next</button>
+  </div>
+
+  <script>
+    const slides = document.querySelectorAll('.slide');
+    let currentSlide = 0;
+
+    function showSlide(n) {
+      slides[currentSlide].style.display = 'none';
+      currentSlide = (n + slides.length) % slides.length;
+      slides[currentSlide].style.display = 'flex';
+    }
+
+    document.getElementById('prev-slide').addEventListener('click', () => showSlide(currentSlide - 1));
+    document.getElementById('next-slide').addEventListener('click', () => showSlide(currentSlide + 1));
+
+    showSlide(currentSlide);
+  </script>
+</html>

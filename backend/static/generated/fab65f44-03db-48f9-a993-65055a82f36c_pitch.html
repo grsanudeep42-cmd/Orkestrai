@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CodeCollab Presentation</title>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;800&display=swap">
+    <style>
+        body {
+            font-family: 'Montserrat', sans-serif;
+            background-color: #2f2f2f;
+            color: #ffffff;
+            margin: 0;
+            padding: 0;
+        }
+        .slide {
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+        }
+        .slide h1 {
+            font-size: 48px;
+            margin-bottom: 20px;
+        }
+        .slide p {
+            font-size: 24px;
+            margin-bottom: 40px;
+        }
+        .slide ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        .slide li {
+            font-size: 24px;
+            margin-bottom: 20px;
+        }
+        .slide a {
+            text-decoration: none;
+            color: #ffffff;
+        }
+        .nav-button {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 24px;
+            cursor: pointer;
+        }
+        .nav-button.left {
+            left: 20px;
+        }
+        .nav-button.right {
+            right: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="slide" id="slide-1">
+        <h1>CodeCollab</h1>
+        <p>A Social Platform for Developers to Share Code Snippets and Collaborate</p>
+        <button class="nav-button left" onclick="prevSlide()">&#10094;</button>
+        <button class="nav-button right" onclick="nextSlide()">&#10095;</button>
+    </div>
+    <div class="slide" id="slide-2" style="display: none;">
+        <h1>Problem Statement</h1>
+        <p>Lack of a dedicated platform for developers to share and collaborate on code snippets</p>
+        <ul>
+            <li>75% of developers spend an average of 2 hours per day searching for code snippets and debugging existing code</li>
+            <li>Current platforms like GitHub, Stack Overflow, and Reddit are not specifically designed for code snippet sharing and collaboration</li>
+        </ul>
+        <button class="nav-button left" onclick="prevSlide()">&#10094;</button>
+        <button class="nav-button right" onclick="nextSlide()">&#10095;</button>
+    </div>
+    <div class="slide" id="slide-3" style="display: none;">
+        <h1>Solution Overview</h1>
+        <p>CodeCollab aims to provide a seamless experience for developers to connect, share knowledge, and work together on coding projects</p>
+        <p>Key Features:</p>
+        <ul>
+            <li>Code snippet sharing and collaboration</li>
+            <li>Developer community and networking</li>
+            <li>Project management and version control</li>
+        </ul>
+        <button class="nav-button left" onclick="prevSlide()">&#10094;</button>
+        <button class="nav-button right" onclick="nextSlide()">&#10095;</button>
+    </div>
+    <div class="slide" id="slide-4" style="display: none;">
+        <h1>Architecture Overview</h1>
+        <p>CodeCollab is built using a microservices architecture, with 7 core components</p>
+        <p>GitHub Repository: <a href="https://github.com/grsanudeep42-cmd/codecollab-platform-935faf">https://github.com/grsanudeep42-cmd/codecollab-platform-935faf</a></p>
+        <button class="nav-button left" onclick="prevSlide()">&#10094;</button>
+        <button class="nav-button right" onclick="nextSlide()">&#10095;</button>
+    </div>
+    <div class="slide" id="slide-5" style="display: none;">
+        <h1>Market Opportunity</h1>
+        <p>Potential user base of 10 million developers (40% of the total developer population)</p>
+        <p>Revenue potential of $100 million per year</p>
+        <button class="nav-button left" onclick="prevSlide()">&#10094;</button>
+        <button class="nav-button right" onclick="nextSlide()">&#10095;</button>
+    </div>
+    <div class="slide" id="slide-6" style="display: none;">
+        <h1>Team and Roadmap</h1>
+        <p>Core team consists of experienced developers and industry experts</p>
+        <p>Roadmap:</p>
+        <ul>
+            <li>Q1: Platform development and testing</li>
+            <li>Q2: Launch and marketing</li>
+            <li>Q3: Feature enhancements and user acquisition</li>
+        </ul>
+        <button class="nav-button left" onclick="prevSlide()">&#10094;</button>
+        <button class="nav-button right" onclick="nextSlide()">&#10095;</button>
+    </div>
+    <script>
+        let currentSlide = 1;
+        const slides = document.querySelectorAll('.slide');
+        function nextSlide() {
+            if (currentSlide < slides.length) {
+                slides[currentSlide - 1].style.display = 'none';
+                currentSlide++;
+                slides[currentSlide - 1].style.display = 'flex';
+            }
+        }
+        function prevSlide() {
+            if (currentSlide > 1) {
+                slides[currentSlide - 1].style.display = 'none';
+                currentSlide--;
+                slides[currentSlide - 1].style.display = 'flex';
+            }
+        }
+    </script>
+</body>
+</html>

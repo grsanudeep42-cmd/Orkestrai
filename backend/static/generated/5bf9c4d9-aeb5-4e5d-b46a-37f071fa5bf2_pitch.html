@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Nexus Online Marketplace</title>
+  <style>
+    /* Dark theme styles */
+    body {
+      font-family: 'Montserrat', sans-serif;
+      background-color: #1c1c1c;
+      color: #f1f1f1;
+      margin: 0;
+      padding: 0;
+    }
+
+    .slide {
+      display: none;
+      padding: 80px;
+      text-align: center;
+    }
+
+    .slide.active {
+      display: block;
+    }
+
+    h1, h2, h3 {
+      font-weight: 600;
+    }
+
+    p {
+      font-size: 18px;
+      line-height: 1.6;
+    }
+
+    .button {
+      display: inline-block;
+      background-color: #007bff;
+      color: #fff;
+      text-decoration: none;
+      padding: 12px 24px;
+      border-radius: 4px;
+      font-size: 16px;
+      transition: background-color 0.3s ease;
+    }
+
+    .button:hover {
+      background-color: #0056b3;
+    }
+  </style>
+</head>
+<body>
+  <div class="slide active">
+    <h1>Nexus Online Marketplace</h1>
+    <p>Connecting Buyers and Sellers in a Seamless Digital Environment</p>
+    <a href="#" class="button">Learn More</a>
+  </div>
+
+  <div class="slide">
+    <h2>The Problem</h2>
+    <p>The traditional brick-and-mortar retail landscape is facing increasing challenges, with consumers gravitating towards the convenience and accessibility of online shopping. Existing online marketplaces often lack personalization, efficient product discovery, and seamless transaction experiences, leaving room for a more user-centric platform to disrupt the industry.</p>
+  </div>
+
+  <div class="slide">
+    <h2>The Solution</h2>
+    <p>Nexus Online Marketplace aims to connect buyers and sellers in a seamless digital environment, enabling efficient product discovery, purchasing, and transaction management. By leveraging the growing demand for e-commerce and the shift towards online shopping, this platform can capture a significant market share in the highly competitive retail industry.</p>
+  </div>
+
+  <div class="slide">
+    <h2>Architecture</h2>
+    <p>Nexus Online Marketplace is built on a robust and scalable architecture, leveraging the latest technologies and best practices to ensure a seamless user experience. The platform integrates with leading payment gateways, provides a user-friendly interface for product listings, and utilizes advanced algorithms for personalized product recommendations and efficient search capabilities.</p>
+  </div>
+
+  <div class="slide">
+    <h2>Market Opportunity</h2>
+    <p>The global e-commerce market is projected to reach $5.4 trillion by 2026, growing at a CAGR of 14.7% from 2021 to 2026. Nexus Online Marketplace is poised to capture a significant share of this rapidly expanding market by providing a differentiated and user-centric platform that caters to the evolving needs of both buyers and sellers.</p>
+  </div>
+
+  <div class="slide">
+    <h2>The Team</h2>
+    <p>Nexus Online Marketplace is led by a seasoned team of e-commerce experts, software engineers, and marketing professionals. With a combined experience of over 50 years in the industry, the team is dedicated to building a world-class platform that revolutionizes the way people shop and sell online.</p>
+    <p>The team is currently working on the MVP and plans to launch the platform in the next 6 months, with a roadmap for continuous feature enhancements and market expansion.</p>
+  </div>
+
+  <script>
+    // Slide navigation
+    const slides = document.querySelectorAll('.slide');
+    let currentSlide = 0;
+
+    function showSlide(n) {
+      slides[currentSlide].classList.remove('active');
+      currentSlide = (n + slides.length) % slides.length;
+      slides[currentSlide].classList.add('active');
+    }
+
+    function nextSlide() {
+      showSlide(currentSlide + 1);
+    }
+
+    function prevSlide() {
+      showSlide(currentSlide - 1);
+    }
+
+    document.addEventListener('keydown', (event) => {
+      if (event.key === 'ArrowRight') {
+        nextSlide();
+      } else if (event.key === 'ArrowLeft') {
+        prevSlide();
+      }
+    });
+  </script>
+</html>

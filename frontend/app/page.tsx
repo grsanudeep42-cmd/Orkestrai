@@ -1,34 +1,56 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowRight, Sparkles, Zap, Code, GitBranch } from "lucide-react";
+import { ArrowRight, Sparkles, Zap, Code, GitBranch, Terminal } from "lucide-react";
+import { useEffect, useState } from "react";
+
+const TerminalText = () => {
+  const [text, setText] = useState("");
+  const fullText = "> Initializing OrkestrAI Swarm...\n> Strategy Agent... Online\n> Architecture Agent... Online\n> Builder Agent... Compiling...\n> GitHub Agent... Repo Created\n> Pitch Agent... Deck Ready\n> Status: SYSTEM READY";
+  
+  useEffect(() => {
+    let i = 0;
+    const timer = setInterval(() => {
+      setText(fullText.slice(0, i));
+      i++;
+      if (i > fullText.length) clearInterval(timer);
+    }, 50);
+    return () => clearInterval(timer);
+  }, []);
+
+  return (
+    <div className="bg-background border border-border p-4 rounded-lg font-mono text-sm text-success whitespace-pre-line h-48 overflow-hidden shadow-[0_0_15px_rgba(0,255,136,0.1)]">
+      {text}<span className="animate-pulse">_</span>
+    </div>
+  );
+};
 
 export default function Home() {
   return (
     <div className="min-h-screen bg-background relative overflow-hidden">
       {/* Background Effects */}
-      <div className="absolute inset-0 z-0">
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[400px] bg-primary/5 rounded-full blur-[120px]" />
-        <div className="absolute bottom-0 right-0 w-[600px] h-[600px] bg-secondary/5 rounded-full blur-[120px]" />
+      <div className="absolute inset-0 z-0 pointer-events-none">
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[400px] bg-primary/10 rounded-full blur-[120px]" />
+        <div className="absolute bottom-0 right-0 w-[600px] h-[600px] bg-secondary/10 rounded-full blur-[120px]" />
       </div>
 
       {/* Header */}
-      <header className="relative z-10 border-b border-outline-variant/30 bg-background/80 backdrop-blur-xl">
+      <header className="relative z-10 border-b border-border bg-background/80 backdrop-blur-xl">
         <div className="container mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center space-x-2">
             <Sparkles className="w-6 h-6 text-primary" />
-            <span className="font-display-lg text-headline-md text-primary tracking-tighter">
+            <span className="text-xl font-bold text-foreground tracking-tighter">
               OrkestrAI
             </span>
           </div>
           <nav className="hidden md:flex items-center space-x-8">
-            <Link href="#features" className="text-on-surface-variant hover:text-primary transition-colors">
+            <Link href="#features" className="text-muted-foreground hover:text-primary transition-colors">
               Features
             </Link>
-            <Link href="#how-it-works" className="text-on-surface-variant hover:text-primary transition-colors">
+            <Link href="#how-it-works" className="text-muted-foreground hover:text-primary transition-colors">
               How It Works
             </Link>
-            <Link href="/create" className="bg-primary text-on-primary px-6 py-2 rounded-lg font-semibold hover:bg-primary-fixed transition-colors">
+            <Link href="/create" className="bg-primary text-background px-6 py-2 rounded-md font-semibold hover:bg-primary-hover transition-colors shadow-[0_0_15px_rgba(0,212,255,0.3)]">
               Get Started
             </Link>
           </nav>
@@ -37,64 +59,78 @@ export default function Home() {
 
       {/* Hero Section */}
       <main className="relative z-10">
-        <section className="container mx-auto px-6 py-20 md:py-32">
-          <div className="max-w-4xl mx-auto text-center space-y-8">
-            <div className="inline-flex items-center space-x-2 bg-surface-container-low border border-outline-variant/30 rounded-full px-4 py-2 mb-4">
-              <Zap className="w-4 h-4 text-tertiary" />
-              <span className="font-code-sm text-code-sm text-on-surface-variant">
-                AI-Powered Development Orchestration
+        <section className="container mx-auto px-6 py-20 md:py-32 grid lg:grid-cols-2 gap-12 items-center">
+          <div className="space-y-8">
+            <div className="inline-flex items-center space-x-2 bg-surface border border-border rounded-full px-4 py-2 mb-4">
+              <Zap className="w-4 h-4 text-primary" />
+              <span className="font-mono text-sm text-primary">
+                v2.0 Autonomous Swarm
               </span>
             </div>
 
-            <h1 className="font-display-lg text-5xl md:text-7xl font-bold text-on-surface leading-tight">
-              Transform Ideas into
-              <span className="text-primary"> Production Code</span>
+            <h1 className="text-5xl md:text-7xl font-bold text-foreground leading-tight">
+              Transform Ideas into <br/>
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-secondary">Production Code</span>
             </h1>
 
-            <p className="font-body-base text-xl text-on-surface-variant max-w-2xl mx-auto">
+            <p className="text-xl text-muted-foreground max-w-xl">
               Watch AI agents collaborate in real-time to design, architect, and build your next project. 
               From concept to deployment in minutes, not days.
             </p>
 
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4">
+            <div className="flex flex-col sm:flex-row items-center gap-4 pt-4">
               <Link 
                 href="/create"
-                className="group bg-primary text-on-primary px-8 py-4 rounded-lg font-semibold text-lg flex items-center space-x-2 hover:bg-primary-fixed transition-all hover:scale-105"
+                className="group bg-primary text-background px-8 py-4 rounded-md font-semibold text-lg flex items-center space-x-2 hover:bg-primary-hover transition-all hover:scale-105 shadow-[0_0_20px_rgba(0,212,255,0.4)]"
               >
                 <span>Start Building</span>
                 <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
               </Link>
-              <button className="bg-surface-container-low border border-outline-variant/30 text-on-surface px-8 py-4 rounded-lg font-semibold text-lg hover:bg-surface-container-high transition-colors">
-                Watch Demo
-              </button>
+              <Link href="https://github.com" className="bg-surface border border-border text-foreground px-8 py-4 rounded-md font-semibold text-lg hover:bg-muted transition-colors flex items-center space-x-2">
+                <GitBranch className="w-5 h-5" />
+                <span>View Output Repo</span>
+              </Link>
             </div>
-
-            {/* Stats */}
-            <div className="grid grid-cols-3 gap-8 pt-12 max-w-2xl mx-auto">
-              <div className="text-center">
-                <div className="font-display-lg text-4xl font-bold text-primary">5</div>
-                <div className="font-code-sm text-code-sm text-on-surface-variant mt-1">AI Agents</div>
+            
+            {/* Stats Bar */}
+            <div className="grid grid-cols-3 gap-6 pt-8 border-t border-border mt-8">
+              <div>
+                <div className="text-3xl font-bold text-foreground">6</div>
+                <div className="text-sm text-muted-foreground uppercase tracking-wider font-mono mt-1">Autonomous Agents</div>
               </div>
-              <div className="text-center">
-                <div className="font-display-lg text-4xl font-bold text-tertiary">10x</div>
-                <div className="font-code-sm text-code-sm text-on-surface-variant mt-1">Faster</div>
+              <div>
+                <div className="text-3xl font-bold text-foreground">10x</div>
+                <div className="text-sm text-muted-foreground uppercase tracking-wider font-mono mt-1">Faster Shipping</div>
               </div>
-              <div className="text-center">
-                <div className="font-display-lg text-4xl font-bold text-secondary">100%</div>
-                <div className="font-code-sm text-code-sm text-on-surface-variant mt-1">Automated</div>
+              <div>
+                <div className="text-3xl font-bold text-foreground">100%</div>
+                <div className="text-sm text-muted-foreground uppercase tracking-wider font-mono mt-1">Ready to Deploy</div>
               </div>
+            </div>
+          </div>
+          
+          <div className="glass-panel p-2 rounded-xl relative group">
+            <div className="absolute -inset-1 bg-gradient-to-r from-primary to-secondary rounded-xl blur opacity-25 group-hover:opacity-40 transition duration-1000 group-hover:duration-200"></div>
+            <div className="relative bg-surface rounded-lg p-2 border border-border">
+              <div className="flex items-center space-x-2 px-4 py-2 border-b border-border mb-2">
+                <div className="w-3 h-3 rounded-full bg-error" />
+                <div className="w-3 h-3 rounded-full bg-warning" />
+                <div className="w-3 h-3 rounded-full bg-success" />
+                <span className="ml-4 font-mono text-xs text-muted-foreground">orkestrai-terminal</span>
+              </div>
+              <TerminalText />
             </div>
           </div>
         </section>
 
         {/* Features Section */}
-        <section id="features" className="container mx-auto px-6 py-20">
+        <section id="features" className="container mx-auto px-6 py-20 border-t border-border/50">
           <div className="text-center mb-16">
-            <h2 className="font-display-lg text-4xl font-bold text-on-surface mb-4">
+            <h2 className="text-4xl font-bold text-foreground mb-4">
               Powered by AI Agent Swarm
             </h2>
-            <p className="font-body-base text-xl text-on-surface-variant max-w-2xl mx-auto">
-              Five specialized AI agents work together to bring your vision to life
+            <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
+              Six specialized AI agents work together to bring your vision to life
             </p>
           </div>
 
@@ -114,27 +150,27 @@ export default function Home() {
               },
               {
                 icon: <Zap className="w-6 h-6" />,
-                title: "Code Builder Agent",
-                description: "Generates production-ready code with best practices and modern frameworks",
-                color: "text-tertiary"
+                title: "Builder Agent",
+                description: "Generates production-ready code with best practices and creates a downloadable zip",
+                color: "text-warning"
               },
               {
                 icon: <GitBranch className="w-6 h-6" />,
                 title: "GitHub Agent",
-                description: "Creates repositories, issues, and project boards for seamless collaboration",
-                color: "text-error"
+                description: "Creates real repositories, pushes code, and configures CI/CD workflows",
+                color: "text-success"
               },
               {
-                icon: <Sparkles className="w-6 h-6" />,
+                icon: <Terminal className="w-6 h-6" />,
                 title: "Pitch Agent",
-                description: "Crafts compelling pitch decks and demo scripts for presentations",
-                color: "text-secondary-fixed-dim"
+                description: "Crafts compelling pitch decks in a self-contained HTML presentation",
+                color: "text-primary"
               },
               {
                 icon: <Code className="w-6 h-6" />,
-                title: "Real-time Updates",
-                description: "Watch agents think and collaborate live with WebSocket streaming",
-                color: "text-primary-fixed-dim"
+                title: "Audit Agent",
+                description: "Ruthlessly reviews outputs and forces retries if quality standards aren't met",
+                color: "text-error"
               }
             ].map((feature, index) => (
               <div 
@@ -144,10 +180,10 @@ export default function Home() {
                 <div className={`${feature.color} mb-4 group-hover:scale-110 transition-transform`}>
                   {feature.icon}
                 </div>
-                <h3 className="font-headline-md text-headline-md text-on-surface mb-2">
+                <h3 className="text-xl font-bold text-foreground mb-2">
                   {feature.title}
                 </h3>
-                <p className="font-body-base text-body-base text-on-surface-variant">
+                <p className="text-muted-foreground">
                   {feature.description}
                 </p>
               </div>
@@ -155,88 +191,45 @@ export default function Home() {
           </div>
         </section>
 
-        {/* How It Works */}
-        <section id="how-it-works" className="container mx-auto px-6 py-20">
-          <div className="text-center mb-16">
-            <h2 className="font-display-lg text-4xl font-bold text-on-surface mb-4">
-              From Idea to Code in 3 Steps
-            </h2>
-          </div>
-
-          <div className="max-w-4xl mx-auto space-y-8">
-            {[
-              {
-                step: "01",
-                title: "Describe Your Idea",
-                description: "Tell us what you want to build in plain English. No technical jargon required."
-              },
-              {
-                step: "02",
-                title: "Watch Agents Work",
-                description: "See AI agents collaborate in real-time, making decisions and generating code."
-              },
-              {
-                step: "03",
-                title: "Download & Deploy",
-                description: "Get production-ready code, documentation, and deployment instructions instantly."
-              }
-            ].map((item, index) => (
-              <div key={index} className="flex items-start space-x-6 group">
-                <div className="flex-shrink-0 w-16 h-16 rounded-full bg-primary/10 border-2 border-primary flex items-center justify-center font-code-sm text-code-sm text-primary font-bold">
-                  {item.step}
-                </div>
-                <div className="flex-1 pt-2">
-                  <h3 className="font-headline-md text-headline-md text-on-surface mb-2 group-hover:text-primary transition-colors">
-                    {item.title}
-                  </h3>
-                  <p className="font-body-base text-body-base text-on-surface-variant">
-                    {item.description}
-                  </p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </section>
-
         {/* CTA Section */}
-        <section className="container mx-auto px-6 py-20">
-          <div className="glass-panel rounded-2xl p-12 text-center max-w-4xl mx-auto">
-            <h2 className="font-display-lg text-4xl font-bold text-on-surface mb-4">
-              Ready to Build Something Amazing?
-            </h2>
-            <p className="font-body-base text-xl text-on-surface-variant mb-8 max-w-2xl mx-auto">
-              Join developers who are shipping faster with AI-powered orchestration
-            </p>
-            <Link 
-              href="/create"
-              className="inline-flex items-center space-x-2 bg-primary text-on-primary px-8 py-4 rounded-lg font-semibold text-lg hover:bg-primary-fixed transition-all hover:scale-105"
-            >
-              <span>Start Your Project</span>
-              <ArrowRight className="w-5 h-5" />
-            </Link>
+        <section className="container mx-auto px-6 py-20 mb-20">
+          <div className="relative rounded-2xl p-12 text-center max-w-4xl mx-auto border border-primary/30 bg-surface overflow-hidden">
+            <div className="absolute inset-0 bg-hero-glow pointer-events-none"></div>
+            <div className="relative z-10">
+              <h2 className="text-4xl font-bold text-foreground mb-4">
+                Ready to Build Something Amazing?
+              </h2>
+              <p className="text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">
+                Stop planning. Start shipping.
+              </p>
+              <Link 
+                href="/create"
+                className="inline-flex items-center space-x-2 bg-primary text-background px-8 py-4 rounded-md font-semibold text-lg hover:bg-primary-hover transition-all hover:scale-105 shadow-[0_0_20px_rgba(0,212,255,0.4)]"
+              >
+                <span>Initialize Swarm</span>
+                <ArrowRight className="w-5 h-5" />
+              </Link>
+            </div>
           </div>
         </section>
       </main>
 
       {/* Footer */}
-      <footer className="relative z-10 border-t border-outline-variant/30 bg-background/80 backdrop-blur-xl">
-        <div className="container mx-auto px-6 py-8">
+      <footer className="relative z-10 border-t border-border bg-surface py-8">
+        <div className="container mx-auto px-6">
           <div className="flex flex-col md:flex-row items-center justify-between">
             <div className="flex items-center space-x-2 mb-4 md:mb-0">
               <Sparkles className="w-5 h-5 text-primary" />
-              <span className="font-code-sm text-code-sm text-on-surface-variant">
+              <span className="font-mono text-sm text-muted-foreground">
                 OrkestrAI © 2026
               </span>
             </div>
             <div className="flex items-center space-x-6">
-              <Link href="#" className="text-on-surface-variant hover:text-primary transition-colors font-code-sm text-code-sm">
+              <Link href="#" className="text-muted-foreground hover:text-primary transition-colors font-mono text-sm">
                 Documentation
               </Link>
-              <Link href="#" className="text-on-surface-variant hover:text-primary transition-colors font-code-sm text-code-sm">
+              <Link href="#" className="text-muted-foreground hover:text-primary transition-colors font-mono text-sm">
                 GitHub
-              </Link>
-              <Link href="#" className="text-on-surface-variant hover:text-primary transition-colors font-code-sm text-code-sm">
-                Support
               </Link>
             </div>
           </div>
@@ -245,5 +238,3 @@ export default function Home() {
     </div>
   );
 }
-
-// Made with Bob

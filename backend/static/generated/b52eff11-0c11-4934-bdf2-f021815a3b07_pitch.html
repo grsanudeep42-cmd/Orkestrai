@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CodeCollab - Presentation</title>
+  <style>
+    /* Dark theme with modern typography */
+    body {
+      font-family: 'Montserrat', sans-serif;
+      background-color: #222;
+      color: #fff;
+      margin: 0;
+      padding: 0;
+    }
+    .slide {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      padding: 2rem;
+      box-sizing: border-box;
+    }
+    h1 {
+      font-size: 3rem;
+      margin-bottom: 1rem;
+    }
+    h2 {
+      font-size: 2rem;
+      margin-bottom: 1rem;
+    }
+    p {
+      font-size: 1.2rem;
+      line-height: 1.5;
+      margin-bottom: 1rem;
+    }
+    .btn {
+      display: inline-block;
+      background-color: #007bff;
+      color: #fff;
+      text-decoration: none;
+      padding: 0.8rem 1.5rem;
+      border-radius: 5px;
+      font-size: 1.2rem;
+      transition: background-color 0.3s;
+    }
+    .btn:hover {
+      background-color: #0056b3;
+    }
+  </style>
+</head>
+<body>
+  <div class="slide">
+    <h1>CodeCollab</h1>
+    <p>A social platform for developers to share code snippets and collaborate</p>
+  </div>
+  <div class="slide">
+    <h2>The Problem</h2>
+    <p>Developers currently use a combination of platforms to share code and get feedback, but these platforms lack the features and functionality needed for effective collaboration.</p>
+  </div>
+  <div class="slide">
+    <h2>The Solution</h2>
+    <p>CodeCollab provides a dedicated platform for developers to share code snippets, get feedback, and collaborate on open-source projects.</p>
+    <a href="#" class="btn">Learn More</a>
+  </div>
+  <div class="slide">
+    <h2>Architecture</h2>
+    <p>CodeCollab is built using a modern tech stack, including React.js, Node.js, and MongoDB, to provide a seamless and scalable user experience.</p>
+  </div>
+  <div class="slide">
+    <h2>Market Opportunity</h2>
+    <p>With an estimated 24.3 million software developers worldwide and a growing demand for code collaboration tools, the market opportunity for CodeCollab is significant.</p>
+  </div>
+  <div class="slide">
+    <h2>Team & Roadmap</h2>
+    <p>Our experienced team of developers and designers is committed to continuously improving CodeCollab and adding new features to meet the evolving needs of our users.</p>
+    <a href="#" class="btn">Join the Team</a>
+  </div>
+
+  <script>
+    // Basic slide navigation
+    const slides = document.querySelectorAll('.slide');
+    let currentSlide = 0;
+
+    function showSlide(n) {
+      slides[currentSlide].style.display = 'none';
+      currentSlide = (n + slides.length) % slides.length;
+      slides[currentSlide].style.display = 'flex';
+    }
+
+    function nextSlide() {
+      showSlide(currentSlide + 1);
+    }
+
+    function prevSlide() {
+      showSlide(currentSlide - 1);
+    }
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowRight') {
+        nextSlide();
+      } else if (e.key === 'ArrowLeft') {
+        prevSlide();
+      }
+    });
+
+    showSlide(currentSlide);
+  </script>
+</body>
+</html>

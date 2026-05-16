@@ -13,7 +13,10 @@ if database_url.startswith("postgresql://"):
 engine = create_async_engine(
     database_url,
     echo=settings.ENVIRONMENT == "development",
-    future=True
+    future=True,
+    pool_size=settings.DB_POOL_SIZE,
+    max_overflow=settings.DB_MAX_OVERFLOW,
+    pool_pre_ping=True
 )
 
 # Create async session factory

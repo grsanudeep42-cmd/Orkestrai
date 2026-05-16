@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Nexus Online Marketplace</title>
+  <style>
+    /* Dark theme with modern typography */
+    body {
+      font-family: 'Montserrat', sans-serif;
+      background-color: #1a1a1a;
+      color: #f2f2f2;
+      margin: 0;
+      padding: 0;
+    }
+
+    .slide {
+      display: none;
+      padding: 50px;
+      text-align: center;
+    }
+
+    .slide.active {
+      display: block;
+    }
+
+    h1 {
+      font-size: 48px;
+      font-weight: 700;
+      margin-bottom: 30px;
+    }
+
+    h2 {
+      font-size: 36px;
+      font-weight: 600;
+      margin-bottom: 20px;
+    }
+
+    p {
+      font-size: 18px;
+      line-height: 1.5;
+      margin-bottom: 30px;
+    }
+
+    .button {
+      display: inline-block;
+      background-color: #007bff;
+      color: #f2f2f2;
+      padding: 12px 24px;
+      border-radius: 4px;
+      text-decoration: none;
+      font-size: 16px;
+      transition: background-color 0.3s ease;
+    }
+
+    .button:hover {
+      background-color: #0056b3;
+    }
+  </style>
+</head>
+<body>
+  <div class="slide active">
+    <h1>Nexus Online Marketplace</h1>
+    <p>Connecting buyers and sellers in a seamless digital environment.</p>
+    <a href="#" class="button">Learn More</a>
+  </div>
+
+  <div class="slide">
+    <h2>The Problem</h2>
+    <p>The traditional brick-and-mortar retail landscape is facing increasing challenges, with consumers gravitating towards the convenience and accessibility of online shopping. Existing online marketplaces often lack personalization, efficient product discovery, and seamless transaction experiences.</p>
+  </div>
+
+  <div class="slide">
+    <h2>The Solution</h2>
+    <p>Nexus Online Marketplace aims to provide a user-centric platform that addresses the shortcomings of existing online marketplaces. By leveraging the growing demand for e-commerce and the shift towards online shopping, Nexus can capture a significant market share in the highly competitive retail industry.</p>
+  </div>
+
+  <div class="slide">
+    <h2>Architecture</h2>
+    <p>Nexus Online Marketplace is built on a robust and scalable architecture that includes:</p>
+    <ul>
+      <li>Intuitive product search and discovery</li>
+      <li>Personalized recommendations and user profiles</li>
+      <li>Secure payment integration and order management</li>
+      <li>Seamless shopping cart and checkout experience</li>
+    </ul>
+  </div>
+
+  <div class="slide">
+    <h2>Market Opportunity</h2>
+    <p>The global e-commerce market is projected to reach $5.4 trillion by 2026, growing at a CAGR of 14.7% from 2021 to 2026. Nexus Online Marketplace is well-positioned to capture a significant share of this rapidly expanding market by providing a user-centric and innovative platform.</p>
+  </div>
+
+  <div class="slide">
+    <h2>Team and Roadmap</h2>
+    <p>Nexus Online Marketplace is led by a team of experienced e-commerce and technology professionals, with a proven track record of building successful platforms. The roadmap includes:</p>
+    <ul>
+      <li>Launch of the MVP by Q4 2023</li>
+      <li>Expansion of product categories and seller onboarding by Q2 2024</li>
+      <li>Implementation of advanced personalization and recommendation algorithms by Q4 2024</li>
+      <li>Continuous improvement and expansion of platform features based on user feedback</li>
+    </ul>
+  </div>
+
+  <script>
+    // JavaScript for basic slide navigation
+    const slides = document.querySelectorAll('.slide');
+    let currentSlide = 0;
+
+    function showSlide(n) {
+      slides[currentSlide].classList.remove('active');
+      currentSlide = (n + slides.length) % slides.length;
+      slides[currentSlide].classList.add('active');
+    }
+
+    function nextSlide() {
+      showSlide(currentSlide + 1);
+    }
+
+    function prevSlide() {
+      showSlide(currentSlide - 1);
+    }
+
+    document.addEventListener('keydown', (event) => {
+      if (event.key === 'ArrowRight') {
+        nextSlide();
+      } else if (event.key === 'ArrowLeft') {
+        prevSlide();
+      }
+    });
+  </script>
+</body>
+</html>

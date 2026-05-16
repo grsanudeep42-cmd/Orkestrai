@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Sparkles, Loader2 } from "lucide-react";
+import { ArrowLeft, Sparkles, Loader2, Terminal } from "lucide-react";
 import { apiClient } from "@/lib/api/client";
 
 export default function CreateProject() {
@@ -52,17 +52,17 @@ export default function CreateProject() {
   ];
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background text-foreground selection:bg-primary/30">
       {/* Header */}
-      <header className="border-b border-outline-variant/30 bg-background/80 backdrop-blur-xl">
+      <header className="border-b border-border bg-background/80 backdrop-blur-xl sticky top-0 z-50">
         <div className="container mx-auto px-6 py-4 flex items-center justify-between">
-          <Link href="/" className="flex items-center space-x-2 text-on-surface-variant hover:text-primary transition-colors">
+          <Link href="/" className="flex items-center space-x-2 text-muted-foreground hover:text-primary transition-colors">
             <ArrowLeft className="w-5 h-5" />
-            <span className="font-code-sm text-code-sm">Back</span>
+            <span className="font-mono text-sm">Back</span>
           </Link>
           <div className="flex items-center space-x-2">
             <Sparkles className="w-6 h-6 text-primary" />
-            <span className="font-display-lg text-headline-md text-primary tracking-tighter">
+            <span className="text-xl font-bold tracking-tighter">
               OrkestrAI
             </span>
           </div>
@@ -70,28 +70,28 @@ export default function CreateProject() {
       </header>
 
       {/* Main Content */}
-      <main className="container mx-auto px-6 py-12 max-w-4xl">
+      <main className="container mx-auto px-6 py-12 max-w-4xl relative">
         {/* Background Glow */}
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[400px] bg-primary/5 rounded-full blur-[120px] pointer-events-none -z-10" />
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[400px] bg-primary/10 rounded-full blur-[120px] pointer-events-none -z-10" />
 
         <div className="space-y-8">
           {/* Header */}
-          <div className="space-y-2">
-            <h1 className="font-headline-md text-headline-md text-on-surface flex items-center space-x-3">
-              <Sparkles className="w-8 h-8 text-primary" />
+          <div className="space-y-2 border-l-2 border-primary pl-4">
+            <h1 className="text-4xl font-bold flex items-center space-x-3">
+              <Terminal className="w-8 h-8 text-primary" />
               <span>Initialize Project</span>
             </h1>
-            <p className="font-body-base text-body-base text-on-surface-variant max-w-2xl">
+            <p className="text-muted-foreground max-w-2xl text-lg">
               Define the core parameters for your new orchestration environment. The AI agent swarm will configure resources based on these inputs.
             </p>
           </div>
 
           {/* Form */}
           <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="glass-panel rounded-xl p-6 space-y-6">
+            <div className="glass-panel rounded-xl p-8 space-y-6 shadow-2xl">
               {/* Project Name */}
               <div className="space-y-2">
-                <label htmlFor="name" className="font-label-caps text-label-caps text-on-surface-variant block uppercase tracking-wider">
+                <label htmlFor="name" className="font-mono text-sm text-muted-foreground block uppercase tracking-wider">
                   Project Identity
                 </label>
                 <input
@@ -100,14 +100,14 @@ export default function CreateProject() {
                   required
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  className="w-full bg-surface-dim border border-outline-variant/50 text-on-surface font-code-sm text-code-sm rounded-lg px-4 py-3 placeholder-on-surface-variant/40 transition-all neon-focus focus:ring-0"
+                  className="w-full bg-surface border border-border text-foreground font-mono text-sm rounded-md px-4 py-3 placeholder-muted transition-all neon-focus focus:ring-0"
                   placeholder="e.g., Nexus-Core-Alpha"
                 />
               </div>
 
               {/* Description */}
               <div className="space-y-2">
-                <label htmlFor="description" className="font-label-caps text-label-caps text-on-surface-variant block uppercase tracking-wider">
+                <label htmlFor="description" className="font-mono text-sm text-muted-foreground block uppercase tracking-wider">
                   Brief Description (Optional)
                 </label>
                 <input
@@ -115,14 +115,14 @@ export default function CreateProject() {
                   type="text"
                   value={formData.description}
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  className="w-full bg-surface-dim border border-outline-variant/50 text-on-surface font-body-base text-body-base rounded-lg px-4 py-3 placeholder-on-surface-variant/40 transition-all neon-focus focus:ring-0"
+                  className="w-full bg-surface border border-border text-foreground rounded-md px-4 py-3 placeholder-muted transition-all neon-focus focus:ring-0"
                   placeholder="A brief one-line description"
                 />
               </div>
 
               {/* User Input */}
               <div className="space-y-2">
-                <label htmlFor="user_input" className="font-label-caps text-label-caps text-on-surface-variant block uppercase tracking-wider">
+                <label htmlFor="user_input" className="font-mono text-sm text-muted-foreground block uppercase tracking-wider">
                   Operational Directives
                 </label>
                 <textarea
@@ -130,14 +130,14 @@ export default function CreateProject() {
                   required
                   value={formData.user_input}
                   onChange={(e) => setFormData({ ...formData, user_input: e.target.value })}
-                  className="w-full bg-surface-dim border border-outline-variant/50 text-on-surface font-body-base text-body-base rounded-lg px-4 py-3 placeholder-on-surface-variant/40 transition-all neon-focus focus:ring-0 resize-y min-h-[150px]"
+                  className="w-full bg-surface border border-border text-foreground rounded-md px-4 py-3 placeholder-muted transition-all neon-focus focus:ring-0 resize-y min-h-[150px]"
                   placeholder="Describe the primary goal, architecture needs, and data flows..."
                 />
-                <div className="flex justify-between items-center">
-                  <span className="font-code-sm text-code-sm text-on-surface-variant/70">
+                <div className="flex justify-between items-center text-muted-foreground font-mono text-xs">
+                  <span>
                     {formData.user_input.length} characters
                   </span>
-                  <span className="font-code-sm text-code-sm text-on-surface-variant/70">
+                  <span>
                     Be specific and detailed
                   </span>
                 </div>
@@ -146,7 +146,7 @@ export default function CreateProject() {
 
             {/* Example Prompts */}
             <div className="space-y-3">
-              <span className="font-label-caps text-label-caps text-on-surface-variant uppercase tracking-wider px-1">
+              <span className="font-mono text-sm text-muted-foreground uppercase tracking-wider px-1">
                 Or Select a Blueprint Template
               </span>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -155,12 +155,12 @@ export default function CreateProject() {
                     key={index}
                     type="button"
                     onClick={() => setFormData({ ...formData, name: prompt.title, user_input: prompt.description })}
-                    className="text-left bg-surface-container/40 hover:bg-surface-container border border-outline-variant/20 hover:border-primary/50 rounded-lg p-4 transition-all group"
+                    className="text-left bg-surface/50 hover:bg-surface border border-border hover:border-primary/50 rounded-lg p-4 transition-all group shadow-sm hover:shadow-[0_0_15px_rgba(0,212,255,0.1)]"
                   >
-                    <h3 className="font-code-sm text-code-sm text-on-surface font-semibold mb-2">
+                    <h3 className="font-bold text-foreground mb-2 group-hover:text-primary transition-colors">
                       {prompt.title}
                     </h3>
-                    <p className="font-body-base text-body-base text-on-surface-variant/80 group-hover:text-on-surface-variant transition-colors text-sm">
+                    <p className="text-muted-foreground text-sm">
                       {prompt.description}
                     </p>
                   </button>
@@ -170,8 +170,9 @@ export default function CreateProject() {
 
             {/* Error Message */}
             {error && (
-              <div className="bg-error-container/20 border border-error/30 rounded-lg p-4">
-                <p className="font-body-base text-body-base text-error">{error}</p>
+              <div className="bg-error/10 border border-error/30 rounded-md p-4 flex items-center space-x-2">
+                <div className="w-2 h-2 rounded-full bg-error animate-pulse" />
+                <p className="text-error font-mono text-sm">{error}</p>
               </div>
             )}
 
@@ -180,17 +181,17 @@ export default function CreateProject() {
               <button
                 type="submit"
                 disabled={isLoading || !formData.name || !formData.user_input}
-                className="bg-primary text-on-primary font-body-base text-body-base font-semibold py-3 px-8 rounded-lg flex items-center space-x-2 hover:bg-primary-fixed-dim transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="bg-primary text-background font-bold py-3 px-8 rounded-md flex items-center space-x-2 hover:bg-primary-hover transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-[0_0_15px_rgba(0,212,255,0.3)] hover:shadow-[0_0_25px_rgba(0,212,255,0.5)]"
               >
                 {isLoading ? (
                   <>
                     <Loader2 className="w-5 h-5 animate-spin" />
-                    <span>Starting Orchestration...</span>
+                    <span>Deploying Swarm...</span>
                   </>
                 ) : (
                   <>
                     <span>Start Orchestration</span>
-                    <Sparkles className="w-5 h-5" />
+                    <Terminal className="w-5 h-5" />
                   </>
                 )}
               </button>

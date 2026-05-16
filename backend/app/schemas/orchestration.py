@@ -19,9 +19,10 @@ class OrchestrationStatus(BaseModel):
 
 class OrchestrationEvent(BaseModel):
     """Schema for WebSocket orchestration events"""
-    type: str  # 'agent_start', 'agent_thinking', 'agent_output', 'agent_complete', 'orchestration_complete', 'error'
+    type: str  # 'agent_start', 'agent_thinking', 'agent_output', 'agent_complete', 'orchestration_complete', 'error', 'agent_critique', 'agent_retry'
     project_id: str
     agent: Optional[str] = None
+    target_agent: Optional[str] = None
     message: Optional[str] = None
     data: Optional[Dict[str, Any]] = None
     status: Optional[str] = None
@@ -29,5 +30,3 @@ class OrchestrationEvent(BaseModel):
     duration_ms: Optional[int] = None
     error: Optional[str] = None
     details: Optional[str] = None
-
-# Made with Bob

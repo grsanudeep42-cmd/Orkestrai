@@ -12,13 +12,16 @@ from app.schemas.orchestration import OrchestrationStatus
 from app.agents.strategy_agent import StrategyAgent
 from app.agents.architecture_agent import ArchitectureAgent
 from app.agents.builder_agent import BuilderAgent
+from app.agents.github_agent import GitHubAgent
+from app.agents.pitch_agent import PitchAgent
+from app.agents.audit_agent import AuditAgent
 from datetime import datetime
 import structlog
+import json
 
 logger = structlog.get_logger()
 
 router = APIRouter()
-
 
 @router.get("/{project_id}/status", response_model=OrchestrationStatus)
 async def get_orchestration_status(
@@ -36,35 +39,22 @@ async def get_orchestration_status(
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
     
-    # Get completed agents
     logs_result = await db.execute(
         select(AgentLog)
         .where(AgentLog.project_id == project_id)
         .where(AgentLog.status == "completed")
     )
     completed_logs = logs_result.scalars().all()
-    completed_agents = [log.agent_name for log in completed_logs]
-    
-    # Calculate progress
-    total_agents = 5  # Strategy, Architecture, Code, GitHub, Pitch
-    progress = int((len(completed_agents) / total_agents) * 100)
-    
-    # Determine current agent
-    current_agent = None
-    if project.status == "orchestrating":
-        if len(completed_agents) == 0:
-            current_agent = "ProductStrategyAgent"
-        elif len(completed_agents) == 1:
-            current_agent = "ArchitectureAgent"
-        elif len(completed_agents) == 2:
-            current_agent = "CodeBuilderAgent"
-        elif len(completed_agents) == 3:
-            current_agent = "GitHubAgent"
-        elif len(completed_agents) == 4:
-            current_agent = "PitchAgent"
-    
-    # Remaining agents
+    completed_agents = list(set([log.agent_name for log in completed_logs if log.agent_name != "AuditAgent"]))
+
     all_agents = ["ProductStrategyAgent", "ArchitectureAgent", "CodeBuilderAgent", "GitHubAgent", "PitchAgent"]
+    total_agents = len(all_agents)
+    progress = int((len(completed_agents) / total_agents) * 100)
+
+    current_agent = None
+    if project.status == "orchestrating" and len(completed_agents) < total_agents:
+        current_agent = all_agents[len(completed_agents)]
+
     remaining_agents = [a for a in all_agents if a not in completed_agents]
     
     return OrchestrationStatus(
@@ -78,9 +68,14 @@ async def get_orchestration_status(
     )
 
 
+from fastapi import Request
+from app.api.dependencies.rate_limiter import limiter
+
 @router.post("/{project_id}/start")
+@limiter.limit("10/minute")
 async def start_orchestration(
     project_id: str,
+    request: Request,
     background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db)
 ):
@@ -101,178 +96,108 @@ async def start_orchestration(
     if project.status == "completed":
         raise HTTPException(status_code=400, detail="Orchestration already completed. Create a new project to run again.")
 
-    # Reset status for pending or failed projects
     if project.status not in ["pending", "failed"]:
         raise HTTPException(status_code=400, detail=f"Cannot start orchestration: project status is {project.status}")
     
-    # Update project status
     project.status = "orchestrating"
     project.updated_at = datetime.utcnow()
     await db.commit()
     
-    # Start orchestration in background
     background_tasks.add_task(run_orchestration, project_id)
     
     return {"message": "Orchestration started", "project_id": project_id}
 
 
-def _format_architecture_as_markdown(architecture: dict) -> str:
-    """Format architecture dictionary as markdown"""
-    md = f"# System Architecture\n\n"
-    
-    if "tech_stack" in architecture:
-        md += "## Tech Stack\n\n"
-        tech = architecture['tech_stack']
-        if isinstance(tech, dict):
-            for category, items in tech.items():
-                md += f"### {category.replace('_', ' ').title()}\n"
-                if isinstance(items, list):
-                    for item in items:
-                        md += f"- {item}\n"
-                else:
-                    md += f"- {items}\n"
-                md += "\n"
-    
-    if "database_schema" in architecture:
-        md += "## Database Schema\n\n"
-        schema = architecture['database_schema']
-        if isinstance(schema, dict) and 'tables' in schema:
-            for table in schema['tables']:
-                if isinstance(table, dict):
-                    md += f"### {table.get('name', 'Table')}\n"
-                    if 'fields' in table:
-                        md += "**Fields:**\n"
-                        for field in table['fields']:
-                            if isinstance(field, dict):
-                                md += f"- `{field.get('name')}` ({field.get('type')}) {field.get('constraints', '')}\n"
-                    md += "\n"
-    
-    if "api_endpoints" in architecture:
-        md += "## API Endpoints\n\n"
-        endpoints = architecture['api_endpoints']
-        if isinstance(endpoints, list):
-            for endpoint in endpoints:
-                if isinstance(endpoint, dict):
-                    md += f"### {endpoint.get('method', 'GET')} {endpoint.get('path', '/')}\n"
-                    md += f"{endpoint.get('description', '')}\n\n"
-    
-    if "system_design" in architecture:
-        md += "## System Design\n\n"
-        md += f"{architecture['system_design']}\n\n"
-    
-    return md
+# Formatting functions...
+def _format_dict_as_markdown(title: str, data: dict | str) -> str:
+    """Fallback basic formatter"""
+    if isinstance(data, str):
+        return data
+    return f"# {title}\n\n```json\n{json.dumps(data, indent=2)}\n```"
 
+def _format_architecture_as_markdown(architecture: dict) -> str:
+    return _format_dict_as_markdown("System Architecture", architecture)
 
 def _format_implementation_as_markdown(implementation: dict) -> str:
-    """Format implementation dictionary as markdown"""
-    md = f"# Implementation Plan\n\n"
-    
-    if "folder_structure" in implementation:
-        md += "## Folder Structure\n\n"
-        structure = implementation['folder_structure']
-        if isinstance(structure, dict):
-            for section, items in structure.items():
-                md += f"### {section.title()}\n```\n"
-                if isinstance(items, list):
-                    for item in items:
-                        md += f"{item}\n"
-                md += "```\n\n"
-    
-    if "implementation_phases" in implementation:
-        md += "## Implementation Phases\n\n"
-        phases = implementation['implementation_phases']
-        if isinstance(phases, list):
-            for phase in phases:
-                if isinstance(phase, dict):
-                    md += f"### {phase.get('phase', 'Phase')}\n"
-                    md += f"**Priority:** {phase.get('priority', 'medium')}\n"
-                    md += f"**Estimated Hours:** {phase.get('estimated_hours', 'TBD')}\n\n"
-                    if 'tasks' in phase:
-                        md += "**Tasks:**\n"
-                        for task in phase['tasks']:
-                            md += f"- {task}\n"
-                    md += "\n"
-    
-    if "deployment_plan" in implementation:
-        md += "## Deployment Plan\n\n"
-        deploy = implementation['deployment_plan']
-        if isinstance(deploy, dict) and 'steps' in deploy:
-            for step in deploy['steps']:
-                md += f"{step}\n"
-            md += "\n"
-    
-    return md
-
+    return _format_dict_as_markdown("Implementation Plan", implementation)
 
 def _format_strategy_as_markdown(strategy: dict) -> str:
-    """Format strategy dictionary as markdown"""
-    md = f"# {strategy.get('project_name', 'Project Strategy')}\n\n"
+    return _format_dict_as_markdown("Product Strategy", strategy)
+
+def _format_github_as_markdown(github: dict) -> str:
+    return _format_dict_as_markdown("GitHub Setup", github)
+
+def _format_pitch_as_markdown(pitch: dict) -> str:
+    return _format_dict_as_markdown("Pitch Materials", pitch)
+
+
+async def execute_agent_with_review(
+    agent_name: str,
+    generation_func: callable,
+    audit_agent: AuditAgent,
+    original_user_input: str,
+    context: dict,
+    event_callback: callable,
+    db: AsyncSession,
+    project_id: str,
+    max_retries: int = 2
+) -> dict:
+    """Executes an agent and puts it through the Audit review loop"""
+    retries = 0
+    memory = {
+        "audit_feedback": None,
+        "shared_context": context,
+        "retry_count": 0
+    }
     
-    if "problem_statement" in strategy:
-        md += f"## Problem Statement\n\n{strategy['problem_statement']}\n\n"
-    
-    if "target_users" in strategy:
-        md += "## Target Users\n\n"
-        users = strategy['target_users']
-        if isinstance(users, str):
-            users = [users]
-        for user in users:
-            md += f"- {user}\n"
-        md += "\n"
-    
-    if "core_features" in strategy:
-        md += "## Core Features\n\n"
-        features = strategy['core_features']
-        if isinstance(features, str):
-            features = [{"name": "Features", "user_story": features}]
-        for feature in features:
-            if isinstance(feature, str):
-                feature = {"name": feature}
-            md += f"### {feature.get('name', 'Feature')}\n"
-            md += f"**Priority:** {feature.get('priority', 'medium')}\n\n"
-            md += f"**User Story:** {feature.get('user_story', '')}\n\n"
-            if 'acceptance_criteria' in feature:
-                md += "**Acceptance Criteria:**\n"
-                criteria_list = feature['acceptance_criteria']
-                if isinstance(criteria_list, str):
-                    criteria_list = [criteria_list]
-                for criteria in criteria_list:
-                    md += f"- {criteria}\n"
-            md += "\n"
-    
-    if "mvp_scope" in strategy:
-        md += "## MVP Scope\n\n"
-        items = strategy['mvp_scope']
-        if isinstance(items, str):
-            items = [items]
-        for item in items:
-            md += f"- {item}\n"
-        md += "\n"
-    
-    if "tech_constraints" in strategy:
-        md += "## Technical Constraints\n\n"
-        constraints = strategy['tech_constraints']
-        if isinstance(constraints, str):
-            constraints = [constraints]
-        for constraint in constraints:
-            md += f"- {constraint}\n"
-        md += "\n"
-    
-    if "success_metrics" in strategy:
-        md += "## Success Metrics\n\n"
-        metrics = strategy['success_metrics']
-        if isinstance(metrics, str):
-            metrics = [metrics]
-        for metric in metrics:
-            md += f"- {metric}\n"
-        md += "\n"
-    
-    return md
+    while retries <= max_retries:
+        if retries > 0:
+            await event_callback({
+                "type": "agent_retry",
+                "agent": agent_name,
+                "timestamp": datetime.utcnow().isoformat(),
+                "message": f"Retrying {agent_name} (Attempt {retries}/{max_retries}) based on feedback."
+            })
+            
+        # 1. Generate Output
+        result = await generation_func(memory=memory)
+        
+        # 2. Audit Output
+        audit_result = await audit_agent.audit_output(
+            agent_name=agent_name,
+            agent_output=result,
+            original_user_input=original_user_input,
+            context=context,
+            event_callback=event_callback
+        )
+        
+        # Save audit log
+        audit_log = AgentLog(
+            project_id=project_id,
+            agent_name="AuditAgent",
+            action=f"audit_{agent_name}",
+            status="completed",
+            started_at=datetime.utcnow(),
+            completed_at=datetime.utcnow(),
+            full_output=audit_result if isinstance(audit_result, dict) else {"markdown_report": str(audit_result)}
+        )
+        db.add(audit_log)
+        await db.commit()
+        
+        if not audit_result.get("needs_retry", False) or retries == max_retries:
+            return result
+            
+        # Update memory for next retry
+        memory["audit_feedback"] = audit_result.get("critique_and_feedback", "")
+        memory["retry_count"] = retries + 1
+        retries += 1
+        
+    return result
 
 
 async def run_orchestration(project_id: str):
     """
-    Run the orchestration process (background task)
+    Run the orchestration process with autonomous review loops
     """
     from app.db.session import AsyncSessionLocal
     from app.api.v1.endpoints.websocket import manager
@@ -281,7 +206,6 @@ async def run_orchestration(project_id: str):
     
     async with AsyncSessionLocal() as db:
         try:
-            # Get project
             result = await db.execute(
                 select(Project).where(Project.id == project_id)
             )
@@ -291,7 +215,6 @@ async def run_orchestration(project_id: str):
                 logger.error("Project not found", project_id=project_id)
                 return
             
-            # Broadcast connection established
             await manager.broadcast_to_project(
                 project_id,
                 {
@@ -302,130 +225,149 @@ async def run_orchestration(project_id: str):
                 }
             )
             
-            # Initialize Strategy Agent with event callbacks
             async def on_agent_event(data: dict):
-                """Callback to broadcast agent events via WebSocket"""
                 await manager.broadcast_to_project(project_id, {
                     "project_id": project_id,
-                    "agent": "ProductStrategyAgent",
                     "timestamp": datetime.utcnow().isoformat(),
                     **data
                 })
             
+            audit_agent = AuditAgent()
+            context = {}
+            
             # ===== AGENT 1: Strategy Agent =====
             strategy_agent = StrategyAgent()
-            logger.info("Running Strategy Agent", project_id=project_id)
-            
-            strategy_result = await strategy_agent.analyze_project(
-                user_input=project.user_input,
-                preferences=project.preferences,
-                event_callback=on_agent_event
-            )
-            
-            # Save strategy agent log
-            strategy_log = AgentLog(
-                project_id=project_id,
-                agent_name="ProductStrategyAgent",
-                action="generate_strategy",
-                status="completed",
-                started_at=datetime.utcnow(),
-                completed_at=datetime.utcnow(),
-                output_preview=str(strategy_result)[:500] if strategy_result else None,
-                full_output=strategy_result
-            )
-            db.add(strategy_log)
-            
-            # Save strategy artifact
-            if strategy_result:
-                strategy_md = _format_strategy_as_markdown(strategy_result)
-                strategy_artifact = GeneratedArtifact(
-                    project_id=project_id,
-                    generated_by="ProductStrategyAgent",
-                    artifact_type="strategy",
-                    content=strategy_md
+            async def run_strategy(memory=None):
+                return await strategy_agent.analyze_project(
+                    user_input=project.user_input,
+                    preferences=project.preferences,
+                    memory=memory,
+                    event_callback=on_agent_event
                 )
-                db.add(strategy_artifact)
+                
+            strategy_result = await execute_agent_with_review(
+                "ProductStrategyAgent", run_strategy, audit_agent, project.user_input, context, on_agent_event, db, project_id
+            )
+            context["strategy"] = strategy_result
+            await on_agent_event({
+                "type": "memory_updated",
+                "message": "Shared Execution Memory updated with Strategy context",
+                "keys": list(context.keys())
+            })
             
+            strategy_log = AgentLog(project_id=project_id, agent_name="ProductStrategyAgent", action="generate_strategy", status="completed", full_output={"content": strategy_result} if isinstance(strategy_result, str) else strategy_result)
+            db.add(strategy_log)
+            db.add(GeneratedArtifact(project_id=project_id, generated_by="ProductStrategyAgent", artifact_type="strategy", content=_format_strategy_as_markdown(strategy_result)))
             await db.commit()
             
             # ===== AGENT 2: Architecture Agent =====
             architecture_agent = ArchitectureAgent()
-            logger.info("Running Architecture Agent", project_id=project_id)
-            
-            architecture_result = await architecture_agent.design_architecture(
-                strategy_output=strategy_result,
-                user_input=project.user_input,
-                preferences=project.preferences,
-                event_callback=on_agent_event
-            )
-            
-            # Save architecture agent log
-            architecture_log = AgentLog(
-                project_id=project_id,
-                agent_name="ArchitectureAgent",
-                action="design_architecture",
-                status="completed",
-                started_at=datetime.utcnow(),
-                completed_at=datetime.utcnow(),
-                output_preview=str(architecture_result)[:500] if architecture_result else None,
-                full_output=architecture_result
-            )
-            db.add(architecture_log)
-            
-            # Save architecture artifact
-            if architecture_result:
-                architecture_md = _format_architecture_as_markdown(architecture_result)
-                architecture_artifact = GeneratedArtifact(
-                    project_id=project_id,
-                    generated_by="ArchitectureAgent",
-                    artifact_type="architecture",
-                    content=architecture_md
+            async def run_architecture(memory=None):
+                return await architecture_agent.design_architecture(
+                    strategy_output=strategy_result,
+                    user_input=project.user_input,
+                    preferences=project.preferences,
+                    memory=memory,
+                    event_callback=on_agent_event
                 )
-                db.add(architecture_artifact)
+                
+            architecture_result = await execute_agent_with_review(
+                "ArchitectureAgent", run_architecture, audit_agent, project.user_input, context, on_agent_event, db, project_id
+            )
+            context["architecture"] = architecture_result
+            await on_agent_event({
+                "type": "memory_updated",
+                "message": "Shared Execution Memory updated with Architecture context",
+                "keys": list(context.keys())
+            })
             
+            arch_log = AgentLog(project_id=project_id, agent_name="ArchitectureAgent", action="design_architecture", status="completed", full_output={"content": architecture_result} if isinstance(architecture_result, str) else architecture_result)
+            db.add(arch_log)
+            db.add(GeneratedArtifact(project_id=project_id, generated_by="ArchitectureAgent", artifact_type="architecture", content=_format_architecture_as_markdown(architecture_result)))
             await db.commit()
             
             # ===== AGENT 3: Builder Agent =====
             builder_agent = BuilderAgent()
-            logger.info("Running Builder Agent", project_id=project_id)
-            
-            implementation_result = await builder_agent.generate_implementation_plan(
-                strategy_output=strategy_result,
-                architecture_output=architecture_result,
-                user_input=project.user_input,
-                preferences=project.preferences,
-                event_callback=on_agent_event
-            )
-            
-            # Save builder agent log
-            builder_log = AgentLog(
-                project_id=project_id,
-                agent_name="BuilderAgent",
-                action="generate_implementation_plan",
-                status="completed",
-                started_at=datetime.utcnow(),
-                completed_at=datetime.utcnow(),
-                output_preview=str(implementation_result)[:500] if implementation_result else None,
-                full_output=implementation_result
-            )
-            db.add(builder_log)
-            
-            # Save implementation artifact
-            if implementation_result:
-                implementation_md = _format_implementation_as_markdown(implementation_result)
-                implementation_artifact = GeneratedArtifact(
-                    project_id=project_id,
-                    generated_by="BuilderAgent",
-                    artifact_type="implementation_plan",
-                    content=implementation_md
+            async def run_builder(memory=None):
+                return await builder_agent.generate_implementation_plan(
+                    strategy_output=strategy_result,
+                    architecture_output=architecture_result,
+                    user_input=project.user_input,
+                    preferences=project.preferences,
+                    memory=memory,
+                    event_callback=on_agent_event
                 )
-                db.add(implementation_artifact)
+                
+            implementation_result = await execute_agent_with_review(
+                "BuilderAgent", run_builder, audit_agent, project.user_input, context, on_agent_event, db, project_id
+            )
+            context["implementation"] = implementation_result
+            await on_agent_event({
+                "type": "memory_updated",
+                "message": "Shared Execution Memory updated with Implementation context",
+                "keys": list(context.keys())
+            })
             
-            # Update project status to completed
+            builder_log = AgentLog(project_id=project_id, agent_name="BuilderAgent", action="generate_implementation_plan", status="completed", full_output=implementation_result)
+            db.add(builder_log)
+            db.add(GeneratedArtifact(project_id=project_id, generated_by="BuilderAgent", artifact_type="implementation_plan", content=_format_implementation_as_markdown(implementation_result)))
+            await db.commit()
+            
+            # ===== AGENT 4: GitHub Agent =====
+            github_agent = GitHubAgent()
+            async def run_github(memory=None):
+                return await github_agent.generate_github_recommendations(
+                    strategy_output=strategy_result,
+                    architecture_output=architecture_result,
+                    implementation_output=implementation_result,
+                    user_input=project.user_input,
+                    preferences=project.preferences,
+                    memory=memory,
+                    event_callback=on_agent_event
+                )
+                
+            github_result = await execute_agent_with_review(
+                "GitHubAgent", run_github, audit_agent, project.user_input, context, on_agent_event, db, project_id
+            )
+            context["github"] = github_result
+            await on_agent_event({
+                "type": "memory_updated",
+                "message": "Shared Execution Memory updated with GitHub context",
+                "keys": list(context.keys())
+            })
+            
+            github_log = AgentLog(project_id=project_id, agent_name="GitHubAgent", action="generate_github_recommendations", status="completed", full_output=github_result)
+            db.add(github_log)
+            db.add(GeneratedArtifact(project_id=project_id, generated_by="GitHubAgent", artifact_type="github_setup", content=_format_github_as_markdown(github_result)))
+            await db.commit()
+            
+            # ===== AGENT 5: Pitch Agent =====
+            pitch_agent = PitchAgent()
+            async def run_pitch(memory=None):
+                return await pitch_agent.generate_pitch_materials(
+                    strategy_output=strategy_result,
+                    architecture_output=architecture_result,
+                    implementation_output=implementation_result,
+                    github_output=github_result,
+                    user_input=project.user_input,
+                    preferences=project.preferences,
+                    memory=memory,
+                    event_callback=on_agent_event
+                )
+                
+            pitch_result = await execute_agent_with_review(
+                "PitchAgent", run_pitch, audit_agent, project.user_input, context, on_agent_event, db, project_id
+            )
+            
+            pitch_log = AgentLog(project_id=project_id, agent_name="PitchAgent", action="generate_pitch_materials", status="completed", full_output=pitch_result)
+            db.add(pitch_log)
+            db.add(GeneratedArtifact(project_id=project_id, generated_by="PitchAgent", artifact_type="pitch_deck", content=_format_pitch_as_markdown(pitch_result)))
+            await db.commit()
+            
+            # Update project status
             project.status = "completed"
             project.completed_at = datetime.utcnow()
             project.updated_at = datetime.utcnow()
-            
             await db.commit()
             
             # Broadcast completion
@@ -439,12 +381,9 @@ async def run_orchestration(project_id: str):
                 }
             )
             
-            logger.info("Orchestration completed successfully - 3 agents executed", project_id=project_id)
-            
         except Exception as e:
             logger.error("Orchestration failed", project_id=project_id, error=str(e))
             
-            # Update project status to failed
             try:
                 result = await db.execute(
                     select(Project).where(Project.id == project_id)
@@ -456,7 +395,6 @@ async def run_orchestration(project_id: str):
                     project.updated_at = datetime.utcnow()
                     await db.commit()
                 
-                # Broadcast error
                 await manager.broadcast_to_project(
                     project_id,
                     {
@@ -469,5 +407,3 @@ async def run_orchestration(project_id: str):
                 )
             except Exception as inner_e:
                 logger.error("Failed to update project status", error=str(inner_e))
-
-# Made with Bob

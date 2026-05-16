@@ -8,20 +8,12 @@ function getWebSocketUrl() {
   const envUrl = process.env.NEXT_PUBLIC_WS_URL;
   if (envUrl) return envUrl;
 
+  const envHost = process.env.NEXT_PUBLIC_WS_HOST;
+  if (envHost) return `ws://${envHost}:8000`;
+
   // Use the full hostname from current page URL
   const pageUrl = new URL(window.location.href);
-  let host = pageUrl.hostname;
-
-  // If accessing via localhost/127.0.0.1, try to detect if we're on a network
-  // by checking if there's a network URL pattern
-  if (host === 'localhost' || host === '127.0.0.1') {
-    // Check if we can infer the actual network IP
-    // Try to get the origin which might have the real IP
-    const possibleHosts = ['192.168.29.111', '192.168.1.', '10.0.0.'];
-    // For now, use a fixed fallback for your network
-    host = '192.168.29.111'; // Your computer's network IP
-    console.log('Detected remote access, using network IP:', host);
-  }
+  const host = pageUrl.hostname;
 
   const protocol = pageUrl.protocol === 'https:' ? 'wss:' : 'ws:';
   const port = '8000';
@@ -35,6 +27,9 @@ export function useWebSocket(projectId: string | null) {
   const [lastEvent, setLastEvent] = useState<WebSocketEvent | null>(null);
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  
+  // Use a ref to break the circular dependency between connect and the setTimeout callback
+  const connectRef = useRef<() => void>();
 
   const connect = useCallback(() => {
     if (!projectId || wsRef.current?.readyState === WebSocket.OPEN) {
@@ -59,9 +54,12 @@ export function useWebSocket(projectId: string | null) {
       try {
         const data: WebSocketEvent = JSON.parse(event.data);
         console.log("WebSocket event:", data);
-        
+
         setLastEvent(data);
-        setEvents((prev) => [...prev, data]);
+        setEvents((prev) => {
+          const updated = [...prev, data];
+          return updated.slice(-100);
+        });
       } catch (error) {
         console.error("Failed to parse WebSocket message:", error);
       }
@@ -81,11 +79,15 @@ export function useWebSocket(projectId: string | null) {
       reconnectTimeoutRef.current = setTimeout(() => {
         if (projectId && wsRef.current?.readyState !== WebSocket.OPEN) {
           console.log("Attempting to reconnect...");
-          connect();
+          connectRef.current?.();
         }
       }, 3000);
     };
   }, [projectId]);
+
+  useEffect(() => {
+    connectRef.current = connect;
+  }, [connect]);
 
   const disconnect = useCallback(() => {
     if (reconnectTimeoutRef.current) {

@@ -4,21 +4,25 @@
 
 ### Agent Pipeline Flow
 
+### Agent Pipeline Flow with Autonomous Review
+
 ```
 User Input (Project Idea)
     ↓
-[Product Strategy Agent]
+[Product Strategy Agent] ↔ [Audit Agent Review]
     ↓ (Requirements, Features, MVP Scope)
-[Architecture Agent]
+[Architecture Agent] ↔ [Audit Agent Review]
     ↓ (Tech Stack, System Design, API Structure)
-[Code Builder Agent]
+[Code Builder Agent] ↔ [Audit Agent Review]
     ↓ (Generated Code, Project Structure)
-[GitHub Management Agent]
+[GitHub Management Agent] ↔ [Audit Agent Review]
     ↓ (Issues, Sprints, Workflow)
-[Pitch & Demo Agent]
+[Pitch & Demo Agent] ↔ [Audit Agent Review]
     ↓
 Final Deliverables
 ```
+
+The new **AuditAgent** ensures output quality and limits hallucinations before moving to the next stage.
 
 ### Agent Definitions
 
@@ -250,15 +254,26 @@ Final Deliverables
 graph TD
     A[User Input] --> B[Orchestrator]
     B --> C[Product Strategy Agent]
-    C --> D[Shared Context Store]
+    C --> AR[Audit Agent Review]
+    AR -->|Needs Retry| C
+    AR -->|Approved| D[Shared Context Store]
     D --> E[Architecture Agent]
-    E --> D
+    E --> AR2[Audit Agent Review]
+    AR2 -->|Needs Retry| E
+    AR2 -->|Approved| D
     D --> F[Code Builder Agent]
-    F --> D
+    F --> AR3[Audit Agent Review]
+    AR3 -->|Needs Retry| F
+    AR3 -->|Approved| D
     D --> G[GitHub Management Agent]
-    G --> D
+    G --> AR4[Audit Agent Review]
+    AR4 -->|Needs Retry| G
+    AR4 -->|Approved| D
     D --> H[Pitch Agent]
-    H --> I[Final Output]
+    H --> AR5[Audit Agent Review]
+    AR5 -->|Needs Retry| H
+    AR5 -->|Approved| D
+    D --> I[Final Output]
     
     D --> J[WebSocket Server]
     J --> K[Frontend Real-time Updates]
