@@ -89,3 +89,5 @@ bob_sessions/
 tmp/
 temp/
 *.tmp
+
+GEMINI.md
