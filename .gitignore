@@ -10,8 +10,9 @@ dist/
 downloads/
 eggs/
 .eggs/
-lib/
-lib64/
+# Be specific with lib to avoid ignoring frontend source code
+backend/lib/
+backend/lib64/
 parts/
 sdist/
 var/
@@ -29,6 +30,9 @@ ENV/
 .env.local
 .env.*.local
 *.env
+# Keep templates
+!config.template
+!.env.example
 
 # Node.js
 node_modules/
@@ -46,6 +50,10 @@ out/
 *.db
 *.sqlite
 *.sqlite3
+
+# Docker
+.dockerignore
+# Ignore local docker volumes if they are created in-repo
 
 # IDE
 .idea/
@@ -72,7 +80,9 @@ credentials/
 *.key
 *.crt
 
-# Bob sessions (may contain sensitive info)
+# Project Specific
+backend/static/generated/*
+!backend/static/generated/.gitkeep
 bob_sessions/
 
 # Temporary files
