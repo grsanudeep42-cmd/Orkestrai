@@ -4,8 +4,10 @@ Orchestration API endpoints
 from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
+from app.api.v1.endpoints.auth import get_current_user
 from app.db.session import get_db
 from app.db.models.project import Project
+from app.db.models.user import User
 from app.db.models.agent_log import AgentLog
 from app.db.models.generated_artifact import GeneratedArtifact
 from app.schemas.orchestration import OrchestrationStatus
@@ -26,13 +28,14 @@ router = APIRouter()
 @router.get("/{project_id}/status", response_model=OrchestrationStatus)
 async def get_orchestration_status(
     project_id: str,
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
 ):
     """
     Get orchestration status for a project
     """
     result = await db.execute(
-        select(Project).where(Project.id == project_id)
+        select(Project).where(Project.id == project_id, Project.user_id == current_user.id)
     )
     project = result.scalar_one_or_none()
     
@@ -47,7 +50,7 @@ async def get_orchestration_status(
     completed_logs = logs_result.scalars().all()
     completed_agents = list(set([log.agent_name for log in completed_logs if log.agent_name != "AuditAgent"]))
 
-    all_agents = ["ProductStrategyAgent", "ArchitectureAgent", "CodeBuilderAgent", "GitHubAgent", "PitchAgent"]
+    all_agents = ["ProductStrategyAgent", "ArchitectureAgent", "BuilderAgent", "GitHubAgent", "PitchAgent"]
     total_agents = len(all_agents)
     progress = int((len(completed_agents) / total_agents) * 100)
 
@@ -77,13 +80,14 @@ async def start_orchestration(
     project_id: str,
     request: Request,
     background_tasks: BackgroundTasks,
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
 ):
     """
     Start orchestration for a project
     """
     result = await db.execute(
-        select(Project).where(Project.id == project_id)
+        select(Project).where(Project.id == project_id, Project.user_id == current_user.id)
     )
     project = result.scalar_one_or_none()
     
@@ -103,7 +107,7 @@ async def start_orchestration(
     project.updated_at = datetime.utcnow()
     await db.commit()
     
-    background_tasks.add_task(run_orchestration, project_id)
+    background_tasks.add_task(run_orchestration, project_id, current_user.id)
     
     return {"message": "Orchestration started", "project_id": project_id}
 
@@ -195,24 +199,26 @@ async def execute_agent_with_review(
     return result
 
 
-async def run_orchestration(project_id: str):
+async def run_orchestration(project_id: str, user_id: str):
     """
     Run the orchestration process with autonomous review loops
     """
     from app.db.session import AsyncSessionLocal
     from app.api.v1.endpoints.websocket import manager
     
-    logger.info("Starting orchestration", project_id=project_id)
+    logger.info("Starting orchestration", project_id=project_id, user_id=user_id)
     
     async with AsyncSessionLocal() as db:
         try:
-            result = await db.execute(
-                select(Project).where(Project.id == project_id)
-            )
-            project = result.scalar_one_or_none()
+            # 1. Fetch project and user
+            proj_result = await db.execute(select(Project).where(Project.id == project_id))
+            project = proj_result.scalar_one_or_none()
             
-            if not project:
-                logger.error("Project not found", project_id=project_id)
+            user_result = await db.execute(select(User).where(User.id == user_id))
+            current_user = user_result.scalar_one_or_none()
+            
+            if not project or not current_user:
+                logger.error("Project or User not found", project_id=project_id, user_id=user_id)
                 return
             
             await manager.broadcast_to_project(
@@ -257,7 +263,7 @@ async def run_orchestration(project_id: str):
             
             strategy_log = AgentLog(project_id=project_id, agent_name="ProductStrategyAgent", action="generate_strategy", status="completed", full_output={"content": strategy_result} if isinstance(strategy_result, str) else strategy_result)
             db.add(strategy_log)
-            db.add(GeneratedArtifact(project_id=project_id, generated_by="ProductStrategyAgent", artifact_type="strategy", content=_format_strategy_as_markdown(strategy_result)))
+            db.add(GeneratedArtifact(project_id=project_id, generated_by="ProductStrategyAgent", artifact_type="strategy", content={"markdown": strategy_result} if isinstance(strategy_result, str) else strategy_result))
             await db.commit()
             
             # ===== AGENT 2: Architecture Agent =====
@@ -283,7 +289,7 @@ async def run_orchestration(project_id: str):
             
             arch_log = AgentLog(project_id=project_id, agent_name="ArchitectureAgent", action="design_architecture", status="completed", full_output={"content": architecture_result} if isinstance(architecture_result, str) else architecture_result)
             db.add(arch_log)
-            db.add(GeneratedArtifact(project_id=project_id, generated_by="ArchitectureAgent", artifact_type="architecture", content=_format_architecture_as_markdown(architecture_result)))
+            db.add(GeneratedArtifact(project_id=project_id, generated_by="ArchitectureAgent", artifact_type="architecture", content={"markdown": architecture_result} if isinstance(architecture_result, str) else architecture_result))
             await db.commit()
             
             # ===== AGENT 3: Builder Agent =====
@@ -310,7 +316,7 @@ async def run_orchestration(project_id: str):
             
             builder_log = AgentLog(project_id=project_id, agent_name="BuilderAgent", action="generate_implementation_plan", status="completed", full_output=implementation_result)
             db.add(builder_log)
-            db.add(GeneratedArtifact(project_id=project_id, generated_by="BuilderAgent", artifact_type="implementation_plan", content=_format_implementation_as_markdown(implementation_result)))
+            db.add(GeneratedArtifact(project_id=project_id, generated_by="BuilderAgent", artifact_type="implementation_plan", content=implementation_result))
             await db.commit()
             
             # ===== AGENT 4: GitHub Agent =====
@@ -323,7 +329,8 @@ async def run_orchestration(project_id: str):
                     user_input=project.user_input,
                     preferences=project.preferences,
                     memory=memory,
-                    event_callback=on_agent_event
+                    event_callback=on_agent_event,
+                    current_user=current_user
                 )
                 
             github_result = await execute_agent_with_review(
@@ -338,7 +345,7 @@ async def run_orchestration(project_id: str):
             
             github_log = AgentLog(project_id=project_id, agent_name="GitHubAgent", action="generate_github_recommendations", status="completed", full_output=github_result)
             db.add(github_log)
-            db.add(GeneratedArtifact(project_id=project_id, generated_by="GitHubAgent", artifact_type="github_setup", content=_format_github_as_markdown(github_result)))
+            db.add(GeneratedArtifact(project_id=project_id, generated_by="GitHubAgent", artifact_type="github_setup", content=github_result))
             await db.commit()
             
             # ===== AGENT 5: Pitch Agent =====
@@ -361,7 +368,7 @@ async def run_orchestration(project_id: str):
             
             pitch_log = AgentLog(project_id=project_id, agent_name="PitchAgent", action="generate_pitch_materials", status="completed", full_output=pitch_result)
             db.add(pitch_log)
-            db.add(GeneratedArtifact(project_id=project_id, generated_by="PitchAgent", artifact_type="pitch_deck", content=_format_pitch_as_markdown(pitch_result)))
+            db.add(GeneratedArtifact(project_id=project_id, generated_by="PitchAgent", artifact_type="pitch_deck", content=pitch_result))
             await db.commit()
             
             # Update project status

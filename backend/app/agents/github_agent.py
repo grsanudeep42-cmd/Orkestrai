@@ -18,6 +18,8 @@ from app.config import settings
 from app.llm.provider_router import router as llm_router
 from app.agents.base_agent import BaseAgent
 
+from app.db.models.user import User
+
 logger = structlog.get_logger()
 
 class GithubWorkflow(BaseModel):
@@ -34,12 +36,20 @@ class GitHubAgent(BaseAgent):
     """GitHub Agent for creating repos and pushing code"""
     
     def __init__(self):
-        self.system_prompt = """You are an elite DevOps and Open Source Maintainer.
-You must define the repository name, description, CI/CD workflow YAML files, and issue trackers.
-- DO NOT use generic placeholder text.
-- Provide actual YAML for workflows.
-- Create 5-10 real GitHub Issues based on implementation phases.
-- If you receive feedback from the AuditAgent, correct your course immediately."""
+        self.system_prompt = """You are an elite DevOps Engineer and Open Source Maintainer.
+Your goal is to define the ideal repository setup and automation for a new project.
+
+CORE RESPONSIBILITIES:
+1) Repository Name & Description - Professional, SEO-friendly, and descriptive.
+2) CI/CD Workflows - Practical GitHub Action YAMLs for testing, linting, and deployment.
+3) Issue Backlog - 5-10 detailed, actionable issues covering immediate next steps.
+4) Branching Strategy - Define a clear main/develop/feature workflow.
+
+CRITICAL INSTRUCTIONS:
+- Do NOT use generic placeholders.
+- Ensure YAML workflows use correct paths and tools based on the actual file tree.
+- Issues must have clear titles and descriptive bodies.
+- Output should be structured and ready for direct API integration or manual setup."""
     
     async def generate_github_recommendations(
         self, 
@@ -49,7 +59,8 @@ You must define the repository name, description, CI/CD workflow YAML files, and
         user_input: str,
         preferences: Optional[Dict[str, Any]] = None,
         memory: Optional[Dict[str, Any]] = None,
-        event_callback: Optional[Callable] = None
+        event_callback: Optional[Callable] = None,
+        current_user: Optional[User] = None
     ) -> Dict[str, Any]:
         """
         Create a GitHub repository, push code, and set up workflows/issues
@@ -138,7 +149,9 @@ Create comprehensive GitHub details including:
             issues_created = 0
             workflows_created = 0
 
-            github_token = settings.GITHUB_TOKEN
+            # Use user's token from database first, fallback to settings ONLY for testing
+            github_token = current_user.github_token if current_user and current_user.github_token else settings.GITHUB_TOKEN
+            
             if github_token and github_token != "your_github_personal_access_token_here":
                 try:
                     g = Github(github_token)

@@ -25,7 +25,7 @@ class AgentLog(Base):
     output_preview: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     full_output: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
     error_details: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
-    log_metadata: Mapped[Optional[dict]] = mapped_column("metadata", JSON, nullable=True)
+    agent_metadata: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
     
     def __repr__(self) -> str:
         return f"<AgentLog(id={self.id}, agent={self.agent_name}, status={self.status})>"

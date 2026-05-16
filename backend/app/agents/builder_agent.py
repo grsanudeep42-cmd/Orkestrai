@@ -18,10 +18,14 @@ class BuilderAgent(BaseAgent):
     """Builder Agent for generating real code scaffold"""
     
     def __init__(self):
-        self.system_prompt = """You are an elite Senior Principal Software Engineer. 
-You write actual, functional, production-ready code. 
-- You MUST generate REAL CODE files, not a plan, not pseudocode, and not TODOs.
-- Provide the complete file content for each file requested.
+        self.system_prompt = """You are an elite Senior Principal Software Engineer and System Architect. 
+You write production-ready, clean, and functional code.
+
+CRITICAL INSTRUCTIONS:
+- You MUST generate REAL CODE files for a complete project scaffold.
+- Do NOT use placeholders, TODOs, or pseudocode.
+- Ensure the backend and frontend are fully integrated and follow the provided architecture.
+- Use best practices for the chosen stack (e.g., error handling, type safety, modularity).
 - Return files using this exact delimiter format:
 
 ===FILE: path/to/file.py===
@@ -30,8 +34,8 @@ file content here
 other content here
 ===END===
 
-- Ensure the backend and frontend code actually work and map to the architecture.
-- If you receive feedback from the AuditAgent, correct your course immediately."""
+- Be concise but complete. Do not truncate files.
+- Ensure the response is well-structured for immediate parsing."""
     
     async def generate_implementation_plan(
         self, 
@@ -46,7 +50,6 @@ other content here
         Generate actual code based on strategy and architecture
         """
         start_time = datetime.utcnow()
-        project_id = memory.get("project_id", str(uuid.uuid4())) if memory else str(uuid.uuid4())
         
         try:
             if event_callback:
@@ -62,41 +65,35 @@ other content here
             strategy_text = strategy_output if isinstance(strategy_output, str) else json.dumps(strategy_output)
             arch_text = architecture_output if isinstance(architecture_output, str) else json.dumps(architecture_output)
 
-            user_prompt = f"""Based on the product strategy and system architecture, generate the ACTUAL CODE FILES for a complete scaffold:
+            user_prompt = f"""Generate a high-quality, production-ready codebase for the following project:
 
 PROJECT IDEA:
 {safe_input}
 
-PRODUCT STRATEGY:
+STRATEGY & GOALS:
 {strategy_text}
 
-SYSTEM ARCHITECTURE:
+ARCHITECTURAL SPECIFICATIONS:
 {arch_text}
 
 USER PREFERENCES:
 {json.dumps(preferences or {})}
-{memory_context}
 
-You must generate the ACTUAL CODE FILES for the project. 
-Do not provide a plan. Provide the functional code.
-Generate at minimum:
-- Backend: main.py, models, routes, config, requirements.txt, Dockerfile
-- Frontend: page.tsx, components, hooks, package.json, Dockerfile
-- Root: docker-compose.yml, .env.example, README.md
+REQUIRED FILES:
+- Backend: Main entry point, database models, API routes, configuration, requirements.txt, and a Dockerfile.
+- Frontend: Main page, key reusable components, state hooks, package.json, and a Dockerfile.
+- Infrastructure: docker-compose.yml for orchestration, .env.example, and a comprehensive README.md.
 
-Ensure the code is robust and follows the architecture precisely."""
+Ensure the code is functional, modular, and matches the architecture perfectly. Do not provide a plan; provide the actual files."""
             
             if event_callback:
                 await event_callback({
                     "type": "agent_thinking",
                     "agent": "BuilderAgent",
-                    "message": "Generating actual code files and creating project scaffold...",
+                    "message": "Generating production-ready code files...",
                     "timestamp": datetime.utcnow().isoformat()
                 })
             
-            logger.info("Calling LLM Provider Router for BuilderAgent")
-            
-            # Use generate_text for generation with high max_tokens to prevent truncation
             raw_response = await llm_router.generate_text(
                 system_prompt=self.system_prompt,
                 user_prompt=user_prompt,
@@ -106,11 +103,10 @@ Ensure the code is robust and follows the architecture precisely."""
                 event_callback=event_callback
             )
             
-            # Parse the raw response using string splitting on ===FILE:
             parsed_files = []
             if "===FILE:" in raw_response:
                 chunks = raw_response.split("===FILE:")
-                for chunk in chunks[1:]:  # Skip everything before the first file
+                for chunk in chunks[1:]:
                     if not chunk.strip():
                         continue
                         
@@ -122,18 +118,13 @@ Ensure the code is robust and follows the architecture precisely."""
                         path_line = lines[0].strip()
                         if path_line.endswith("==="):
                             path_line = path_line[:-3].strip()
-                        content = lines[1]
+                        content = lines[1].strip()
                         
-                        # Strip markdown backticks from the content if present
-                        content = content.strip()
                         if content.startswith("```"):
-                            # Remove the first line (e.g., ```python)
                             content = content.split('\n', 1)[-1] if '\n' in content else ""
                         if content.endswith("```"):
-                            # Remove the last line (e.g., ```)
                             content = content.rsplit('\n', 1)[0] if '\n' in content else ""
-                            
-                        # Ensure content ends with a newline
+                        
                         if content:
                             content += '\n'
                         
@@ -141,38 +132,13 @@ Ensure the code is robust and follows the architecture precisely."""
                             parsed_files.append({"path": path_line, "content": content})
             
             if not parsed_files:
-                raise ValueError("No files parsed from LLM response.")
+                raise ValueError("No code files were parsed from the response.")
                 
-            generated_data = {
-                "message": f"Successfully generated {len(parsed_files)} files.",
-                "files": parsed_files
-            }
-            
-            # Post process to zip file
-            zip_buffer = io.BytesIO()
-            with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zip_file:
-                for file_obj in generated_data.get("files", []):
-                    zip_file.writestr(file_obj["path"], file_obj["content"])
-            
-            # Save zip file to static directory
-            base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-            static_dir = os.path.join(base_dir, "static", "generated")
-            os.makedirs(static_dir, exist_ok=True)
-            zip_filename = f"{project_id}.zip"
-            zip_path = os.path.join(static_dir, zip_filename)
-            with open(zip_path, "wb") as f:
-                f.write(zip_buffer.getvalue())
-            
-            zip_url = f"/static/generated/{zip_filename}"
-            
-            # Create final output dict
             safe_output = {
-                "message": generated_data.get("message", "Successfully generated codebase"),
-                "files_generated": len(generated_data.get("files", [])),
-                "zip_url": zip_url,
-                "file_tree": [f["path"] for f in generated_data.get("files", [])],
-                "zip_path": zip_path,  # for other agents like GitHubAgent
-                "files": generated_data.get("files", [])
+                "message": f"Successfully generated {len(parsed_files)} code files.",
+                "files_generated": len(parsed_files),
+                "file_tree": [f["path"] for f in parsed_files],
+                "files": parsed_files
             }
             
             end_time = datetime.utcnow()
@@ -194,7 +160,6 @@ Ensure the code is robust and follows the architecture precisely."""
                     "timestamp": end_time.isoformat()
                 })
             
-            logger.info("Implementation code generation complete", duration_ms=duration_ms)
             return safe_output
             
         except Exception as e:

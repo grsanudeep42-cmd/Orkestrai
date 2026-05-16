@@ -1,8 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowRight, Sparkles, Zap, Code, GitBranch, Terminal } from "lucide-react";
+import { ArrowRight, Sparkles, Zap, Code, GitBranch, Terminal, Plus, LayoutDashboard, History, ExternalLink, Loader2, LogOut, ShieldCheck } from "lucide-react";
 import { useEffect, useState } from "react";
+import { apiClient } from "@/lib/api/client";
+import { Project } from "@/types";
 
 const TerminalText = () => {
   const [text, setText] = useState("");
@@ -26,6 +28,140 @@ const TerminalText = () => {
 };
 
 export default function Home() {
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    if (token) {
+      setIsLoggedIn(true);
+      fetchProjects();
+    } else {
+      setIsLoggedIn(false);
+      setIsLoading(false);
+    }
+  }, []);
+
+  const fetchProjects = async () => {
+    try {
+      setIsLoading(true);
+      const data = await apiClient.listProjects();
+      setProjects(data?.projects || []);
+    } catch (err) {
+      console.error("Failed to fetch projects", err);
+      setProjects([]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleLogout = () => {
+    apiClient.logout();
+  };
+
+  if (isLoggedIn) {
+    return (
+      <div className="min-h-screen bg-background text-foreground">
+        <header className="border-b border-border bg-background/80 backdrop-blur-xl sticky top-0 z-50">
+          <div className="container mx-auto px-6 py-4 flex items-center justify-between">
+            <div className="flex items-center space-x-2">
+              <Sparkles className="w-6 h-6 text-primary" />
+              <span className="text-xl font-bold tracking-tighter">OrkestrAI</span>
+            </div>
+            <div className="flex items-center space-x-4">
+              <Link href="/settings" className="p-2 text-muted-foreground hover:text-primary transition-colors" title="Settings">
+                <ShieldCheck className="w-5 h-5" />
+              </Link>
+              <Link href="/create" className="flex items-center space-x-2 bg-primary text-background px-4 py-2 rounded-lg font-bold hover:bg-primary-hover transition-all text-sm shadow-[0_0_15px_rgba(0,212,255,0.3)]">
+                <Plus className="w-4 h-4" />
+                <span>New Project</span>
+              </Link>
+              <button onClick={handleLogout} className="p-2 text-muted-foreground hover:text-error transition-colors" title="Logout">
+                <LogOut className="w-5 h-5" />
+              </button>
+            </div>
+          </div>
+        </header>
+
+        <main className="container mx-auto px-6 py-12">
+          <div className="flex items-center justify-between mb-12">
+            <div>
+              <h1 className="text-4xl font-bold flex items-center space-x-3">
+                <LayoutDashboard className="w-10 h-10 text-primary" />
+                <span>Project Swarm</span>
+              </h1>
+              <p className="text-muted-foreground mt-2">Manage and revisit your AI-generated architectures</p>
+            </div>
+          </div>
+
+          {isLoading ? (
+            <div className="flex items-center justify-center py-32">
+              <Loader2 className="w-12 h-12 text-primary animate-spin" />
+            </div>
+          ) : projects.length === 0 ? (
+            <div className="text-center py-32 border-2 border-dashed border-border rounded-[2rem] bg-surface/30">
+              <Zap className="w-16 h-16 text-muted-foreground/30 mx-auto mb-6" />
+              <h2 className="text-2xl font-bold mb-2">No projects orchestrated yet</h2>
+              <p className="text-muted-foreground mb-10 max-w-sm mx-auto">Your vision is waiting. Start your first swarm to see it here.</p>
+              <Link href="/create" className="bg-primary text-background px-10 py-4 rounded-2xl font-bold hover:bg-primary-hover transition-all shadow-[0_0_20px_rgba(0,212,255,0.4)]">
+                Initialize Swarm
+              </Link>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+              {projects.map((project) => (
+                <Link 
+                  key={project.id} 
+                  href={project.status === 'completed' ? `/project/${project.id}/results` : `/project/${project.id}`}
+                  className="group bg-surface border border-border p-8 rounded-[2rem] hover:border-primary/50 transition-all hover:shadow-[0_0_40px_rgba(0,212,255,0.1)] relative overflow-hidden flex flex-col"
+                >
+                  <div className={`absolute top-0 right-0 w-32 h-32 -mr-12 -mt-12 rounded-full blur-3xl opacity-10 transition-opacity group-hover:opacity-20 ${
+                    project.status === 'completed' ? 'bg-success' : 'bg-warning'
+                  }`} />
+                  
+                  <div className="flex items-start justify-between mb-6">
+                    <div className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest ${
+                      project.status === 'completed' ? 'bg-success/10 text-success border border-success/20' : 
+                      project.status === 'failed' ? 'bg-error/10 text-error border border-error/20' :
+                      'bg-warning/10 text-warning border border-warning/20 animate-pulse'
+                    }`}>
+                      {project.status}
+                    </div>
+                    <History className="w-5 h-5 text-muted-foreground/40" />
+                  </div>
+
+                  <h3 className="text-2xl font-bold mb-3 line-clamp-1 group-hover:text-primary transition-colors pr-4">
+                    {project.name}
+                  </h3>
+                  <p className="text-sm text-muted-foreground line-clamp-2 mb-8 flex-grow">
+                    {project.user_input}
+                  </p>
+
+                  <div className="flex items-center justify-between pt-6 border-t border-border/50">
+                    <div className="flex items-center space-x-3">
+                      <div className="flex -space-x-3">
+                        {[1, 2, 3].map(i => (
+                          <div key={i} className="w-8 h-8 rounded-full bg-background border border-border flex items-center justify-center shadow-sm">
+                            <Sparkles className="w-4 h-4 text-primary" />
+                          </div>
+                        ))}
+                      </div>
+                      <span className="text-[10px] text-muted-foreground font-mono font-bold tracking-tighter uppercase">6 Agent Swarm</span>
+                    </div>
+                    <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center group-hover:bg-primary group-hover:text-background transition-all">
+                      <ArrowRight className="w-4 h-4" />
+                    </div>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          )}
+        </main>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-background relative overflow-hidden">
       {/* Background Effects */}
@@ -44,14 +180,14 @@ export default function Home() {
             </span>
           </div>
           <nav className="hidden md:flex items-center space-x-8">
-            <Link href="#features" className="text-muted-foreground hover:text-primary transition-colors">
+            <Link href="#features" className="text-muted-foreground hover:text-primary transition-colors font-semibold">
               Features
             </Link>
-            <Link href="#how-it-works" className="text-muted-foreground hover:text-primary transition-colors">
-              How It Works
+            <Link href="/login" className="text-foreground font-bold hover:text-primary transition-colors">
+              Login
             </Link>
-            <Link href="/create" className="bg-primary text-background px-6 py-2 rounded-md font-semibold hover:bg-primary-hover transition-colors shadow-[0_0_15px_rgba(0,212,255,0.3)]">
-              Get Started
+            <Link href="/signup" className="bg-primary text-background px-6 py-2 rounded-lg font-bold hover:bg-primary-hover transition-colors shadow-[0_0_15px_rgba(0,212,255,0.3)]">
+              Join Swarm
             </Link>
           </nav>
         </div>

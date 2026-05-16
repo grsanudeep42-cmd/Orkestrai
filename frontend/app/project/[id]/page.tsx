@@ -21,10 +21,18 @@ export default function OrchestrationView() {
   
   const [project, setProject] = useState<Project | null>(null);
   const [status, setStatus] = useState<OrchestrationStatus | null>(null);
+  const [historicalEvents, setHistoricalEvents] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   
-  const { isConnected, events, lastEvent } = useWebSocket(projectId);
+  const { isConnected, events: liveEvents, lastEvent } = useWebSocket(projectId);
+
+  // Combine live and historical events, removing duplicates
+  const events = [...historicalEvents, ...liveEvents].filter((event, index, self) => 
+    index === self.findIndex((e) => (
+      e.timestamp === event.timestamp && e.agent === event.agent && e.message === event.message
+    ))
+  );
 
   // Metrics & State
   const retriesCount = events.filter(e => e.type === "agent_retry").length;
@@ -35,12 +43,27 @@ export default function OrchestrationView() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [projectData, statusData] = await Promise.all([
+        const [projectData, statusData, logsData] = await Promise.all([
           apiClient.getProject(projectId),
           apiClient.getOrchestrationStatus(projectId),
+          apiClient.getLogs(projectId)
         ]);
         setProject(projectData);
         setStatus(statusData);
+
+        // Map AgentLog to WebSocketEvent format
+        const mappedLogs = logsData.map(log => ({
+          type: log.status === 'completed' ? 'agent_complete' : 
+                log.status === 'failed' ? 'error' : 
+                log.agent_name === 'AuditAgent' ? 'agent_critique' : 'agent_start',
+          agent: log.agent_name,
+          message: log.output_preview || log.action.replace(/_/g, ' '),
+          timestamp: log.started_at,
+          duration_ms: log.duration_ms,
+          data: log.full_output
+        }));
+        setHistoricalEvents(mappedLogs);
+
       } catch (err) {
         setError(err instanceof Error ? err.message : "Failed to load project");
       } finally {
@@ -65,7 +88,7 @@ export default function OrchestrationView() {
   const agents = [
     { name: "ProductStrategyAgent", label: "Strategy", icon: "🎯", color: "text-secondary" },
     { name: "ArchitectureAgent", label: "Architecture", icon: "🏗️", color: "text-primary" },
-    { name: "CodeBuilderAgent", label: "Builder", icon: "⚡", color: "text-warning" },
+    { name: "BuilderAgent", label: "Builder", icon: "⚡", color: "text-warning" },
     { name: "GitHubAgent", label: "GitHub", icon: "🔀", color: "text-success" },
     { name: "PitchAgent", label: "Pitch", icon: "✨", color: "text-primary" },
     { name: "AuditAgent", label: "Auditor", icon: "🧐", color: "text-error" },
@@ -109,9 +132,12 @@ export default function OrchestrationView() {
       <header className="border-b border-border bg-background/80 backdrop-blur-xl sticky top-0 z-50">
         <div className="container mx-auto px-6 py-4">
           <div className="flex items-center justify-between mb-4">
-            <Link href="/" className="flex items-center space-x-2 text-muted-foreground hover:text-primary transition-colors">
+            <Link 
+              href={project?.status === 'completed' ? `/project/${projectId}/results` : "/"} 
+              className="flex items-center space-x-2 text-muted-foreground hover:text-primary transition-colors"
+            >
               <ArrowLeft className="w-5 h-5" />
-              <span className="font-mono text-sm">Back</span>
+              <span className="font-mono text-sm">Back to {project?.status === 'completed' ? 'Results' : 'Dashboard'}</span>
             </Link>
             <div className="flex items-center space-x-4">
               <div className="flex items-center space-x-2">

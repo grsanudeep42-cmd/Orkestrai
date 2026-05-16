@@ -5,9 +5,18 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, Sparkles, Loader2, Terminal } from "lucide-react";
 import { apiClient } from "@/lib/api/client";
+import { useEffect } from "react";
 
 export default function CreateProject() {
   const router = useRouter();
+  
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    if (!token) {
+      router.push("/login");
+    }
+  }, [router]);
+
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   
