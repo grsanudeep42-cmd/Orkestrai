@@ -33,9 +33,9 @@ Our diverse team of innovators brought OrkestrAI to life through a passion for A
 
 | Member | Role | GitHub |
 | :--- | :--- | :--- |
-| **Sandeep** | Backend & AI/ML Engineer | [@grsanudeep42-cmd](https://github.com/grsanudeep42-cmd) |
-| **Yogeswar** | Frontend & UI/UX Developer | [@yogeswar142](https://github.com/yogeswar142) |
-| **Naagu** | Full-stack & DevOps Engineer | [@Naagu-2508](https://github.com/Naagu-2508) |
+| **Anudeep** | Full-stack & DevOps Engineer | [@grsanudeep42-cmd](https://github.com/grsanudeep42-cmd) |
+| **Yogeswar** | Backend & AI/ML Engineer | [@yogeswar142](https://github.com/yogeswar142) |
+| **Nagu** | Frontend & UI/UX Developer | [@Nagu-2508](https://github.com/Naagu-2508) |
 
 ---
 
