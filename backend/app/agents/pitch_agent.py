@@ -17,26 +17,32 @@ class PitchAgent(BaseAgent):
     
     def __init__(self, api_keys: Optional[Dict[str, str]] = None):
         super().__init__(api_keys)
-        self.system_prompt = """You are an elite Startup Founder, Product Designer, and Storyteller.
-Your goal is to generate a stunning, professional, and self-contained HTML presentation deck.
+        self.system_prompt = """You are an elite Startup Founder, VC, and Lead Product Designer.
+Your goal is to generate a world-class, high-conversion HTML pitch deck.
 
-PRESENTATION STRUCTURE:
-1) Title slide - Compelling project name and high-impact tagline.
-2) Problem Statement - Clearly articulate the pain point being addressed.
-3) Market Opportunity - TAM, SAM, SOM analysis with realistic data estimates.
-4) Solution - How this product uniquely solves the problem.
-5) Core Features - Key functionality and technical differentiators.
-6) Tech Stack - Technology choices, architecture, and why they were selected.
-7) Business Model - Revenue streams, pricing strategy, and go-to-market plan.
-8) Roadmap - Future milestones and vision.
+DESIGN SYSTEM:
+- Framework: Tailwind CSS (<script src="https://cdn.tailwindcss.com"></script>)
+- Typography: Inter (Google Fonts)
+- Aesthetic: Modern Cyberpunk/SaaS. Use Slate-950 for backgrounds, Indigo-500 for primary actions, and Cyan-400 for accents.
+- Icons: Use inline SVGs for professional icons (e.g., Lucide style).
 
-TECHNICAL REQUIREMENTS:
-- Return ONLY raw HTML. No JSON wrapper. No markdown code fences.
-- Use a modern, dark-themed CSS (e.g., Tailwind-like utility classes or custom professional CSS).
-- Include JavaScript for smooth slide-to-slide navigation (using keyboard arrows and on-screen buttons).
-- Use professional typography (e.g., Inter, System Fonts).
-- Ensure the presentation is fully responsive and looks great on all screens.
-- Derive all data from the project inputs; do NOT use generic placeholders.
+SLIDE STRUCTURE (8-10 SLIDES):
+1. **Hero**: Project name, futuristic tagline, "Built with OrkestrAI" badge.
+2. **The Problem**: High-impact visualization of the pain point.
+3. **The Solution**: How the product solves it, with a "magical" feel.
+4. **Market Opportunity**: TAM/SAM/SOM with clean SVG charts.
+5. **Core Features**: Feature grid with glassmorphism cards.
+6. **Technical Edge**: Deep dive into the architecture and AI integration.
+7. **Business Model**: Monetization and growth loops.
+8. **Roadmap**: Interactive timeline showing the future vision.
+9. **The Team/Closing**: Call to action and "Get Started" link.
+
+TECHNICAL SPECS:
+- Return ONLY raw HTML. No Markdown fences.
+- MUST include Keyboard Navigation (Left/Right arrows) and On-screen controls.
+- Use smooth CSS transitions (`transition-all`, `duration-500`).
+- Ensure all content is project-specific. NO generic text.
+- Use a fixed layout with a "Slides" container that scales to fit.
 
 Start your response with <!DOCTYPE html> and end with </html>."""
     
@@ -137,16 +143,30 @@ Generate the complete, self-contained HTML presentation now."""
             
         except Exception as e:
             logger.error("Pitch materials failed", error=str(e))
+            
+            # Use fallback mechanism
+            fallback_output = self._create_fallback_pitch(
+                strategy_output=strategy_output,
+                raw_output=str(e)
+            )
+            
             if event_callback:
                 await event_callback({
-                    "type": "error",
+                    "type": "agent_output",
                     "agent": "PitchAgent",
-                    "error": str(e),
-                    "details": "Failed to generate pitch materials",
+                    "data": fallback_output,
                     "timestamp": datetime.utcnow().isoformat()
                 })
-            
-            raise e
+                
+            if event_callback:
+                await event_callback({
+                    "type": "agent_complete",
+                    "agent": "PitchAgent",
+                    "duration_ms": 0,
+                    "timestamp": datetime.utcnow().isoformat()
+                })
+                
+            return fallback_output
     
     def _create_fallback_pitch(self, strategy_output: Dict[str, Any] | str, raw_output: str = "") -> Dict[str, Any]:
         """Create fallback pitch"""

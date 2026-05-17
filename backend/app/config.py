@@ -38,6 +38,9 @@ class Settings(BaseSettings):
     # OpenAI
     OPENAI_API_KEY: str = ""
 
+    # Bob AI
+    BOB_API_KEY: str = ""
+
     # GitHub Integration
     GITHUB_TOKEN: str = ""
     GITHUB_CLIENT_ID: str = ""

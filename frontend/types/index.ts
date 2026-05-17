@@ -44,18 +44,21 @@ export interface OrchestrationStatus {
 }
 
 export interface WebSocketEvent {
-  type: "agent_start" | "agent_thinking" | "agent_output" | "agent_complete" | "orchestration_complete" | "error" | "connection_established" | "agent_critique" | "agent_retry" | "provider_selected" | "provider_fallback" | "memory_updated";
+  type: "agent_start" | "agent_thinking" | "agent_output" | "agent_complete" | "orchestration_complete" | "error" | "connection_established" | "agent_critique" | "agent_retry" | "provider_selected" | "provider_fallback" | "provider_error" | "memory_updated" | "usage_stats" | "echo" | string;
   project_id?: string;
   agent?: string;
   target_agent?: string;
   provider?: string;
   message?: string;
   data?: Record<string, unknown>;
+  usage?: Record<string, number>;
   status?: string;
   timestamp?: string;
   duration_ms?: number;
   error?: string;
   details?: string;
+  is_token_exhausted?: boolean;
+  is_token_error?: boolean;
 }
 
 export interface GeneratedArtifact {

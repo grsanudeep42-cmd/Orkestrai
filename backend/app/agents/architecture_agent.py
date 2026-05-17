@@ -113,7 +113,7 @@ IMPORTANT: Your entire output MUST be in cleanly formatted Markdown. DO NOT wrap
                 await event_callback({
                     "type": "agent_output",
                     "agent": "ArchitectureAgent",
-                    "data": architecture_output,
+                    "data": architecture_result,
                     "timestamp": end_time.isoformat()
                 })
             
@@ -126,7 +126,7 @@ IMPORTANT: Your entire output MUST be in cleanly formatted Markdown. DO NOT wrap
                 })
             
             logger.info("Architecture design complete", duration_ms=duration_ms)
-            return architecture_output
+            return architecture_result
             
         except Exception as e:
             logger.error("Architecture design failed", error=str(e))

@@ -29,7 +29,7 @@ export function useWebSocket(projectId: string | null) {
   const reconnectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   
   // Use a ref to break the circular dependency between connect and the setTimeout callback
-  const connectRef = useRef<() => void>();
+  const connectRef = useRef<(() => void) | undefined>(undefined);
 
   const connect = useCallback(() => {
     if (!projectId || wsRef.current?.readyState === WebSocket.OPEN) {

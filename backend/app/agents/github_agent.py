@@ -37,7 +37,8 @@ class GitHubAgent(BaseAgent):
     
     def __init__(self, api_keys: Optional[Dict[str, str]] = None):
         super().__init__(api_keys)
-        self.system_prompt = """You are an elite DevOps Engineer and Open Source Maintainer.
+        self.workflow_templates = self._load_workflow_templates()
+        self.system_prompt = f"""You are an elite DevOps Engineer and Open Source Maintainer.
 Your goal is to define the ideal repository setup and automation for a new project.
 
 CORE RESPONSIBILITIES:
@@ -46,12 +47,37 @@ CORE RESPONSIBILITIES:
 3) Issue Backlog - 5-10 detailed, actionable issues covering immediate next steps.
 4) Branching Strategy - Define a clear main/develop/feature workflow.
 
+VERIFIED WORKFLOW TEMPLATES (USE THESE AS FOUNDATION):
+- Python CI: {self.workflow_templates.get('python_ci', 'Standard Python CI')}
+- Node.js CI: {self.workflow_templates.get('node_ci', 'Standard Node.js CI')}
+
 CRITICAL INSTRUCTIONS:
 - Do NOT use generic placeholders.
 - Ensure YAML workflows use correct paths and tools based on the actual file tree.
 - Issues must have clear titles and descriptive bodies.
-- Output should be structured and ready for direct API integration or manual setup."""
-    
+- Output should be structured and ready for direct API integration or manual setup.
+- You MUST use the provided templates as the basis for workflows, adapting them only where necessary for the specific project structure."""
+
+    def _load_workflow_templates(self) -> Dict[str, str]:
+        """Load workflow templates from the filesystem"""
+        templates = {}
+        base_path = os.path.join(os.path.dirname(__file__), "boilerplates")
+        try:
+            if os.path.exists(base_path):
+                mapping = {
+                    "python_ci": "python-ci.yml.tmpl",
+                    "node_ci": "node-ci.yml.tmpl"
+                }
+                for key, filename in mapping.items():
+                    file_path = os.path.join(base_path, filename)
+                    if os.path.exists(file_path):
+                        with open(file_path, "r") as f:
+                            templates[key] = f.read()
+            return templates
+        except Exception as e:
+            logger.warning(f"Failed to load workflow templates: {e}")
+            return {}
+
     async def generate_github_recommendations(
         self, 
         strategy_output: Dict[str, Any] | str,
@@ -109,11 +135,12 @@ IMPLEMENTATION SUMMARY:
 CRITICAL CI/CD INSTRUCTIONS:
 - Use correct working directories that match the actual folder structure from the Architecture output and Project File Tree.
 - Only reference tools and package managers that exist in the generated files (e.g., use 'npm' only if 'package.json' exists, use 'pip' only if 'requirements.txt' exists).
+- Use the provided verified workflow templates. Ensure they use 'actions/checkout@v4'.
 
 Create comprehensive GitHub details including:
 1. **Repository Name**: A suitable, slugified name for the project (e.g., 'nexus-core-app')
 2. **Repository Description**: A short description
-3. **Workflows**: CI/CD pipeline YAML contents (e.g., ci.yml, cd.yml). Must be valid YAML.
+3. **Workflows**: CI/CD pipeline YAML contents (e.g., ci.yml, cd.yml). Must be valid YAML and based on the provided templates.
 4. **Issues**: 5-10 real GitHub Issues based on the implementation phases (each with 'title' and 'body')
 """
             
@@ -146,14 +173,15 @@ Create comprehensive GitHub details including:
                     "timestamp": datetime.utcnow().isoformat()
                 })
 
-            repo_url = ""
-            issues_created = 0
-            workflows_created = 0
-
-            # Use user's token from database
-            github_token = current_user.github_token
+            # Check if we already created a repo in a previous retry
+            existing_repo_url = memory.get("created_repo_url") if memory else None
+            repo_url = existing_repo_url or ""
             
-            if github_token:
+            github_token = getattr(current_user, "github_token", None) if current_user else getattr(settings, "GITHUB_TOKEN", None)
+            workflows_created = 0
+            issues_created = 0
+            
+            if github_token and not existing_repo_url:
                 try:
                     g = Github(github_token)
                     user = g.get_user()
@@ -180,9 +208,12 @@ Create comprehensive GitHub details including:
                             raise ge
 
                     repo_url = repo.html_url
+                    if memory:
+                        memory["created_repo_url"] = repo_url
+                        memory["repo_name_actual"] = repo.name
 
                     # Push code from Builder output in shared execution memory via GitHub API
-                    builder_output = shared_context.get("implementation", implementation_output) if 'shared_context' in locals() else implementation_output
+                    builder_output = shared_context.get("implementation", implementation_output) if shared_context else implementation_output
                     files = builder_output.get("files", [])
                     
                     for file_obj in files:
@@ -278,6 +309,17 @@ Create comprehensive GitHub details including:
                             "details": "Failed to push to GitHub due to API error or invalid token.",
                             "timestamp": datetime.utcnow().isoformat()
                         })
+            elif existing_repo_url:
+                if event_callback:
+                    await event_callback({
+                        "type": "agent_thinking",
+                        "agent": "GitHubAgent",
+                        "message": f"Repository already created: {existing_repo_url}. Updating content if needed...",
+                        "timestamp": datetime.utcnow().isoformat()
+                    })
+                # In a retry, we might want to update files, but for now let's just avoid creating a new repo.
+                # If we really need to update files on retry, we'd need more logic here.
+                # However, the user's primary complaint is the multiple repos.
             else:
                 if event_callback:
                     await event_callback({

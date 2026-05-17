@@ -9,7 +9,7 @@ import { useWebSocket } from "@/hooks/use-websocket";
 import { Project, GeneratedArtifact } from "@/types";
 import { formatDistanceToNow } from "date-fns";
 import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
+// import remarkGfm from "remark-gfm";
 import CodeFilesView from "@/components/CodeFilesView";
 
 const parseUTCDate = (dateString: string | undefined | null) => {
@@ -17,9 +17,122 @@ const parseUTCDate = (dateString: string | undefined | null) => {
   return new Date(dateString.endsWith('Z') ? dateString : dateString + 'Z');
 };
 
+const GithubSetupArtifact = ({ data, projectId, events }: { data: any; projectId: string; events: any[] }) => {
+  const isPending = !data.repository_url || data.repository_url.includes("setup-pending");
+  const [isRetrying, setIsRetrying] = useState(false);
+  const [retryStatus, setRetryStatus] = useState<string | null>(null);
+
+  const handleRetryGithub = async () => {
+    setIsRetrying(true);
+    setRetryStatus(null);
+    try {
+      await apiClient.request(`/api/v1/projects/${projectId}/github-retry`, { method: "POST" });
+      setRetryStatus("success");
+      window.location.reload();
+    } catch (err: any) {
+      setRetryStatus(err.message || "Retry failed");
+    } finally {
+      setIsRetrying(false);
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="bg-surface border border-border p-6 rounded-lg text-center space-y-4">
+        <GitBranch className="w-12 h-12 text-success mx-auto" />
+        {isPending ? (
+          <>
+            <h3 className="text-xl font-bold text-foreground">GitHub Setup Recommended</h3>
+            <p className="text-muted-foreground">GitHub token not configured. Below are the recommended workflows and issues for your manual setup.</p>
+            <div className="flex flex-col items-center space-y-3">
+              <Link href="/settings" className="text-primary hover:underline text-sm font-bold">
+                Connect GitHub in Settings
+              </Link>
+              <button 
+                onClick={handleRetryGithub}
+                disabled={isRetrying}
+                className="flex items-center space-x-2 bg-primary/10 hover:bg-primary/20 text-primary px-6 py-2 rounded-lg font-bold border border-primary/30 transition-all disabled:opacity-50"
+              >
+                {isRetrying ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
+                <span>Retry GitHub Integration</span>
+              </button>
+            </div>
+          </>
+        ) : (
+          <>
+            <h3 className="text-xl font-bold text-foreground">GitHub Repository Created</h3>
+            <p className="text-muted-foreground">The generated code has been pushed to your new repository.</p>
+            <div className="flex justify-center space-x-4">
+              <a href={data.repository_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center space-x-2 bg-success text-background px-6 py-3 rounded-md font-bold hover:bg-success/90 transition-colors">
+                <GitBranch className="w-5 h-5" />
+                <span>View Repository on GitHub</span>
+              </a>
+              <button 
+                onClick={handleRetryGithub}
+                disabled={isRetrying}
+                className="flex items-center space-x-2 bg-muted/20 hover:bg-muted/30 text-foreground px-6 py-3 rounded-md font-bold transition-all disabled:opacity-50 border border-border"
+              >
+                {isRetrying ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
+                <span>Push to Repo Again</span>
+              </button>
+            </div>
+          </>
+        )}
+        {retryStatus && retryStatus !== "success" && (
+          <p className="text-error text-xs font-mono">{retryStatus}</p>
+        )}
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="p-4 bg-muted/10 border border-border rounded-lg">
+          <h4 className="font-bold text-foreground mb-3 flex items-center space-x-2">
+            <GitBranch className="w-4 h-4 text-primary" />
+            <span>Workflows Recommended</span>
+          </h4>
+          <ul className="space-y-2">
+            {data.workflows_created > 0 ? (
+              <li className="text-sm text-muted-foreground flex items-center space-x-2">
+                <CheckCircle2 className="w-3.5 h-3.5 text-success" />
+                <span>{data.workflows_created} CI/CD workflows created</span>
+              </li>
+            ) : (
+              <li className="text-sm text-muted-foreground">CI/CD workflows defined for manual setup</li>
+            )}
+            <li className="text-sm text-muted-foreground flex items-center space-x-2">
+              <CheckCircle2 className="w-3.5 h-3.5 text-success" />
+              <span>Branching strategy: {data.branch_strategy?.main_branch} & {data.branch_strategy?.development_branch}</span>
+            </li>
+          </ul>
+        </div>
+        <div className="p-4 bg-muted/10 border border-border rounded-lg">
+          <h4 className="font-bold text-foreground mb-3 flex items-center space-x-2">
+            <AlertCircle className="w-4 h-4 text-warning" />
+            <span>Issues & Roadmap</span>
+          </h4>
+          <p className="text-sm text-muted-foreground">{data.issues_created || 0} issues planned and documented in the project backlog.</p>
+        </div>
+      </div>
+
+      <div className="p-4 bg-muted/5 border border-border rounded-lg">
+        <h4 className="font-bold text-foreground mb-2 text-sm">GitHub Operations Log</h4>
+        <div className="font-mono text-[10px] text-muted-foreground whitespace-pre-wrap max-h-40 overflow-y-auto space-y-1">
+          {events.filter(e => e.agent === "GitHubAgent").length > 0 ? (
+            events.filter(e => e.agent === "GitHubAgent").map((e, idx) => (
+              <div key={idx} className="border-l border-primary/30 pl-2">
+                <span className="text-primary/70 mr-2">[{new Date(e.timestamp).toLocaleTimeString()}]</span>
+                {e.message || e.type}
+              </div>
+            ))
+          ) : (
+            <div>{data.message || "Ready for integration."}</div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const ArtifactRenderer = ({ type, content, projectId, events }: { type: string; content: string; projectId: string; events: any[] }) => {
-  // Try to parse as JSON first in case some agents still output JSON
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let data: any;
   let isJson = false;
 
@@ -31,11 +144,8 @@ const ArtifactRenderer = ({ type, content, projectId, events }: { type: string; 
       data = JSON.parse(cleanContent);
       isJson = true;
     }
-  } catch (_e) {
-    // Not JSON, it's fine, it's probably Markdown
-  }
+  } catch (_e) {}
 
-  // If it's a known structured agent that outputs URLs/JSON, render custom
   if (isJson) {
     if (type === "implementation_plan" && (data.files || data.file_tree)) {
       const downloadUrl = `http://localhost:8000/api/v1/projects/${projectId}/download`;
@@ -69,122 +179,9 @@ const ArtifactRenderer = ({ type, content, projectId, events }: { type: string; 
         </div>
       );
     }
-    
+
     if (type === "github_setup") {
-      const isPending = !data.repository_url || data.repository_url.includes("setup-pending");
-      // eslint-disable-next-line react-hooks/rules-of-hooks
-      const [isRetrying, setIsRetrying] = useState(false);
-      // eslint-disable-next-line react-hooks/rules-of-hooks
-      const [retryStatus, setRetryStatus] = useState<string | null>(null);
-
-      const handleRetryGithub = async () => {
-        setIsRetrying(true);
-        setRetryStatus(null);
-        try {
-          await apiClient.request(`/api/v1/projects/${projectId}/github-retry`, { method: "POST" });
-          setRetryStatus("success");
-          window.location.reload(); // Refresh to show new artifact data
-        } catch (err: any) {
-          setRetryStatus(err.message || "Retry failed");
-        } finally {
-          setIsRetrying(false);
-        }
-      };
-      
-      return (
-        <div className="space-y-6">
-          <div className="bg-surface border border-border p-6 rounded-lg text-center space-y-4">
-            <GitBranch className="w-12 h-12 text-success mx-auto" />
-            {isPending ? (
-              <>
-                <h3 className="text-xl font-bold text-foreground">GitHub Setup Recommended</h3>
-                <p className="text-muted-foreground">GitHub token not configured. Below are the recommended workflows and issues for your manual setup.</p>
-                <div className="flex flex-col items-center space-y-3">
-                  <Link href="/settings" className="text-primary hover:underline text-sm font-bold">
-                    Connect GitHub in Settings
-                  </Link>
-                  <button 
-                    onClick={handleRetryGithub}
-                    disabled={isRetrying}
-                    className="flex items-center space-x-2 bg-primary/10 hover:bg-primary/20 text-primary px-6 py-2 rounded-lg font-bold border border-primary/30 transition-all disabled:opacity-50"
-                  >
-                    {isRetrying ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
-                    <span>Retry GitHub Integration</span>
-                  </button>
-                </div>
-              </>
-            ) : (
-              <>
-                <h3 className="text-xl font-bold text-foreground">GitHub Repository Created</h3>
-                <p className="text-muted-foreground">The generated code has been pushed to your new repository.</p>
-                <div className="flex justify-center space-x-4">
-                  <a href={data.repository_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center space-x-2 bg-success text-background px-6 py-3 rounded-md font-bold hover:bg-success/90 transition-colors">
-                    <GitBranch className="w-5 h-5" />
-                    <span>View Repository on GitHub</span>
-                  </a>
-                  <button 
-                    onClick={handleRetryGithub}
-                    disabled={isRetrying}
-                    className="flex items-center space-x-2 bg-muted/20 hover:bg-muted/30 text-foreground px-6 py-3 rounded-md font-bold transition-all disabled:opacity-50 border border-border"
-                  >
-                    {isRetrying ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
-                    <span>Push to Repo Again</span>
-                  </button>
-                </div>
-              </>
-            )}
-            {retryStatus && retryStatus !== "success" && (
-              <p className="text-error text-xs font-mono">{retryStatus}</p>
-            )}
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="p-4 bg-muted/10 border border-border rounded-lg">
-              <h4 className="font-bold text-foreground mb-3 flex items-center space-x-2">
-                <GitBranch className="w-4 h-4 text-primary" />
-                <span>Workflows Recommended</span>
-              </h4>
-              <ul className="space-y-2">
-                {data.workflows_created > 0 ? (
-                  <li className="text-sm text-muted-foreground flex items-center space-x-2">
-                    <CheckCircle2 className="w-3.5 h-3.5 text-success" />
-                    <span>{data.workflows_created} CI/CD workflows created</span>
-                  </li>
-                ) : (
-                  <li className="text-sm text-muted-foreground">CI/CD workflows defined for manual setup</li>
-                )}
-                <li className="text-sm text-muted-foreground flex items-center space-x-2">
-                  <CheckCircle2 className="w-3.5 h-3.5 text-success" />
-                  <span>Branching strategy: {data.branch_strategy?.main_branch} & {data.branch_strategy?.development_branch}</span>
-                </li>
-              </ul>
-            </div>
-            <div className="p-4 bg-muted/10 border border-border rounded-lg">
-              <h4 className="font-bold text-foreground mb-3 flex items-center space-x-2">
-                <AlertCircle className="w-4 h-4 text-warning" />
-                <span>Issues & Roadmap</span>
-              </h4>
-              <p className="text-sm text-muted-foreground">{data.issues_created || 0} issues planned and documented in the project backlog.</p>
-            </div>
-          </div>
-
-          <div className="p-4 bg-muted/5 border border-border rounded-lg">
-            <h4 className="font-bold text-foreground mb-2 text-sm">GitHub Operations Log</h4>
-            <div className="font-mono text-[10px] text-muted-foreground whitespace-pre-wrap max-h-40 overflow-y-auto space-y-1">
-              {events.filter(e => e.agent === "GitHubAgent").length > 0 ? (
-                events.filter(e => e.agent === "GitHubAgent").map((e, idx) => (
-                  <div key={idx} className="border-l border-primary/30 pl-2">
-                    <span className="text-primary/70 mr-2">[{new Date(e.timestamp).toLocaleTimeString()}]</span>
-                    {e.message || e.type}
-                  </div>
-                ))
-              ) : (
-                <div>{data.message || "Ready for integration."}</div>
-              )}
-            </div>
-          </div>
-        </div>
-      );
+      return <GithubSetupArtifact data={data} projectId={projectId} events={events} />;
     }
 
     if (type === "pitch_deck") {
@@ -220,7 +217,7 @@ const ArtifactRenderer = ({ type, content, projectId, events }: { type: string; 
   // Default Markdown Renderer
   return (
     <div className="prose prose-invert prose-p:text-muted-foreground prose-headings:text-foreground prose-a:text-primary max-w-none">
-      <ReactMarkdown remarkPlugins={[remarkGfm]}>
+      <ReactMarkdown>
         {content}
       </ReactMarkdown>
     </div>
