@@ -1,29 +1,88 @@
-# 🚀 OrkestrAI
+<div align="center">
+  <img src="https://raw.githubusercontent.com/grsanudeep42-cmd/Orkestrai/main/assets/banner.png" alt="OrkestrAI Header" />
+  
+  <h3><em>Empowering Hackathons through Autonomous Multi-Agent Orchestration</em></h3>
 
-### *Empowering Hackathons through Autonomous Multi-Agent Orchestration*
-
-![OrkestrAI Header](https://raw.githubusercontent.com/grsanudeep42-cmd/Orkestrai/main/assets/banner.png)
+  [![Next.js](https://img.shields.io/badge/Next.js-16-black?style=for-the-badge&logo=next.js)](https://nextjs.org/)
+  [![FastAPI](https://img.shields.io/badge/FastAPI-0.109-009688?style=for-the-badge&logo=fastapi)](https://fastapi.tiangolo.com/)
+  [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-336791?style=for-the-badge&logo=postgresql)](https://www.postgresql.org/)
+  [![Python](https://img.shields.io/badge/Python-3.12-3776AB?style=for-the-badge&logo=python)](https://python.org/)
+</div>
 
 ---
 
 ## 🌟 About the Project
 
-**OrkestrAI** is a cutting-edge, multi-agent AI platform designed to revolutionize the way hackathon projects are conceived, planned, and executed. Built specifically for the **IBM Hackathon**, OrkestrAI leverages the power of **IBM watsonx** and **CrewAI** to orchestrate a team of specialized AI agents that work in perfect harmony to transform a single spark of an idea into a comprehensive, pitch-ready project.
+**OrkestrAI** is a cutting-edge, multi-agent AI platform designed to revolutionize the way hackathon projects are conceived, planned, and executed. Built specifically for the **IBM Hackathon**, OrkestrAI leverages an advanced custom orchestration engine to manage a team of specialized AI agents. They work in perfect harmony to transform a single spark of an idea into a comprehensive, pitch-ready project in under 2 minutes.
 
-In the high-pressure environment of a hackathon, time is the most valuable currency. OrkestrAI collapses 8 hours of strategy, architecture design, and project scaffolding into just 5 minutes of autonomous collaboration.
-
-### 🤖 The Agentic Squad
-- **Strategic Visionary**: Crafts market analysis and project roadmaps.
-- **System Architect**: Designs robust backend schemas and frontend structures.
-- **Lead Builder**: Generates production-ready boilerplate and implementation guides.
-- **GitHub Integrator**: Orchestrates repository setup, issues, and project boards.
-- **Pitch Maestro**: Compiles winning elevator pitches and demonstration scripts.
+In the high-pressure environment of a hackathon, time is the most valuable currency. OrkestrAI collapses 8 hours of strategy, architecture design, and project scaffolding into just **90 seconds** of autonomous collaboration.
 
 ---
 
-## 🏆 IBM Hackathon Edition
+## 🤖 The 6-Agent Autonomous Squad
 
-This project was built from the ground up for the **IBM Hackathon**, showcasing the integration of enterprise-grade AI with modern developer workflows. By utilizing **IBM watsonx.ai**, we ensure that the orchestration is powered by state-of-the-art models capable of complex reasoning and high-fidelity code generation.
+Our proprietary orchestration pipeline runs agents sequentially, backed by a robust `ProviderRouter` that handles LLM fallbacks (IBM watsonx, Groq, OpenRouter, Gemini, OpenAI) and circuit breaking for 99.9% uptime.
+
+1. 🎯 **Strategic Visionary**: Crafts market analysis, product scope, and project roadmaps.
+2. 🏗️ **System Architect**: Designs robust backend schemas, APIs, and frontend structures.
+3. ⚡ **Lead Builder**: Generates production-ready boilerplate code and implementation guides.
+4. 🔀 **GitHub Integrator**: Orchestrates repository setup, creates branches, and pushes code via the GitHub API.
+5. ✨ **Pitch Maestro**: Compiles winning elevator pitches, demo scripts, and presentation materials.
+6. 🔍 **Audit Controller**: A self-correcting QA loop that audits every agent's output, preventing hallucinations and enforcing retries when necessary.
+
+---
+
+## ⚙️ Tech Stack & Architecture
+
+OrkestrAI is built with a modern, highly scalable two-tier architecture:
+
+* **Frontend:** Next.js 16 (App Router), React 19, Tailwind CSS v4, Zustand, Framer Motion.
+* **Backend:** FastAPI (Async), PostgreSQL, SQLAlchemy 2.0, Alembic.
+* **Real-Time Engine:** Custom WebSocket manager for streaming live agent execution logs to the cyberpunk dashboard.
+
+---
+
+## 🚀 Quick Start Guide
+
+Want to run OrkestrAI locally? Follow these steps:
+
+### Prerequisites
+* Python 3.11+
+* Node.js 18+
+* PostgreSQL 14+
+
+### 1. Database & Backend Setup
+```bash
+# Clone the repository
+git clone https://github.com/grsanudeep42-cmd/Orkestrai.git
+cd Orkestrai/backend
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Configure environment variables (Add your DB URL and API Keys)
+cp config.template .env
+
+# Start the FastAPI server
+uvicorn app.main:app --reload
+```
+
+### 2. Frontend Setup
+```bash
+# In a new terminal, navigate to the frontend
+cd Orkestrai/frontend
+
+# Install dependencies
+npm install
+
+# Configure environment variables
+cp config.template .env.local
+
+# Start the Next.js development server
+npm run dev
+```
+
+Visit `http://localhost:3000` to access the dashboard and start building!
 
 ---
 
@@ -36,19 +95,6 @@ Our diverse team of innovators brought OrkestrAI to life through a passion for A
 | **Anudeep** | Full-stack & DevOps Engineer | [@grsanudeep42-cmd](https://github.com/grsanudeep42-cmd) |
 | **Yogeswar** | Backend & AI/ML Engineer | [@yogeswar142](https://github.com/yogeswar142) |
 | **Nagu** | Frontend & UI/UX Developer | [@Nagu-2508](https://github.com/Naagu-2508) |
-
----
-
-## 📖 How to Use OrkestrAI
-
-OrkestrAI is designed for simplicity and maximum impact. Follow these steps to supercharge your build:
-
-1. **Ignite the Idea**: Enter your project concept and specific preferences into the intuitive dashboard.
-2. **Observe the Orchestration**: Watch in real-time as the 5 specialized agents communicate, review, and refine their work via our live WebSocket visualization.
-3. **Analyze the Artifacts**: Explore the high-fidelity outputs, including strategy documents, architecture diagrams, and implementation guides.
-4. **Deploy & Scaffolding**: Download your complete project scaffolding as a ready-to-use ZIP file.
-5. **Sync to GitHub**: Automatically populate your repository with generated issues and a structured project board.
-6. **Master the Pitch**: Use the generated scripts and slide outlines to deliver a judge-impressing demo.
 
 ---
 
