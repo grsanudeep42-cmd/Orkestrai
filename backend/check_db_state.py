@@ -20,6 +20,12 @@ async def check_db():
                 print("No projects found in database.")
             for p in projects:
                 print(f"Project: {p.id} | Name: {p.name} | UserID: {p.user_id} | Status: {p.status}")
+                # Query artifacts
+                art_res = await conn.execute(text("SELECT id, artifact_type FROM generated_artifacts WHERE project_id = :pid"), {"pid": p.id})
+                artifacts = art_res.fetchall()
+                print(f"  Artifacts ({len(artifacts)}):")
+                for art in artifacts:
+                    print(f"    - {art.artifact_type} ({art.id})")
                 
     except Exception as e:
         print(f"Error: {e}")

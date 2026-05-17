@@ -12,7 +12,7 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     - name: Set up Python
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v5
       with:
         python-version: "3.11"
     - name: Install dependencies
@@ -23,4 +23,8 @@ jobs:
       run: |
         pip install flake8
         # stop the build if there are Python syntax errors or undefined names
-        flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+        if [ -d backend ]; then
+          flake8 backend/ --count --select=E9,F63,F7,F82 --show-source --statistics
+        else
+          flake8 . --count --exclude=node_modules,.next,.venv,venv --select=E9,F63,F7,F82 --show-source --statistics
+        fi

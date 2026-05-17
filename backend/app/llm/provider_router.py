@@ -47,20 +47,27 @@ class ProviderRouter:
             logger.warning(f"Circuit breaker tripped for {name}. Skipping for 60 seconds.")
             
     def _get_providers(self, api_keys: Dict[str, str]) -> list[BaseProvider]:
-        """Create provider instances based on provided API keys"""
+        """Create provider instances based on provided API keys or environment settings"""
         providers = []
         
+        # Get active keys prioritizing user-specific keys then system fallback
+        gemini_key = api_keys.get("gemini") or settings.GEMINI_API_KEY
+        groq_key = api_keys.get("groq") or settings.GROQ_API_KEY
+        openai_key = api_keys.get("openai") or settings.OPENAI_API_KEY
+        openrouter_key = api_keys.get("openrouter") or settings.OPENROUTER_API_KEY
+        bob_key = api_keys.get("bob") or settings.BOB_API_KEY
+        
         # Initialize providers if keys are present
-        if api_keys.get("gemini"):
-            providers.append(GeminiProvider(api_key=api_keys["gemini"]))
-        if api_keys.get("groq"):
-            providers.append(GroqProvider(api_key=api_keys["groq"], model=settings.GROQ_MODEL))
-        if api_keys.get("openai"):
-            providers.append(OpenAIProvider(api_key=api_keys["openai"]))
-        if api_keys.get("openrouter"):
-            providers.append(OpenRouterProvider(api_key=api_keys["openrouter"]))
-        if api_keys.get("bob"):
-            providers.append(BobProvider(api_key=api_keys["bob"]))
+        if gemini_key:
+            providers.append(GeminiProvider(api_key=gemini_key))
+        if groq_key:
+            providers.append(GroqProvider(api_key=groq_key, model=settings.GROQ_MODEL))
+        if openai_key:
+            providers.append(OpenAIProvider(api_key=openai_key))
+        if openrouter_key:
+            providers.append(OpenRouterProvider(api_key=openrouter_key))
+        if bob_key:
+            providers.append(BobProvider(api_key=bob_key))
             
         # Sort by priority if defined in settings
         priority_list = [p.strip().lower() for p in settings.PROVIDER_PRIORITY.split(",")]

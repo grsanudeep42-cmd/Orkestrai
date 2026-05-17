@@ -68,7 +68,13 @@ other content here
                 mapping = {
                     "fastapi_main": "fastapi_main.py.tmpl",
                     "nextjs_page": "nextjs_page.tsx.tmpl",
-                    "docker_compose": "docker-compose.yml.tmpl"
+                    "docker_compose": "docker-compose.yml.tmpl",
+                    "backend_dockerfile": "backend-Dockerfile.tmpl",
+                    "backend_requirements": "backend-requirements.txt.tmpl",
+                    "frontend_dockerfile": "frontend-Dockerfile.tmpl",
+                    "frontend_package_json": "frontend-package.json.tmpl",
+                    "gitignore": "gitignore.tmpl",
+                    "readme": "README.md.tmpl"
                 }
                 for key, filename in mapping.items():
                     file_path = os.path.join(base_path, filename)
@@ -146,6 +152,18 @@ Provide the output strictly conforming to the JSON schema."""
                     parsed_files.append({"path": path, "content": self.boilerplates["nextjs_page"]})
                 elif "docker-compose.yml" in path and "docker_compose" in self.boilerplates:
                     parsed_files.append({"path": path, "content": self.boilerplates["docker_compose"]})
+                elif "backend/Dockerfile" in path and "backend_dockerfile" in self.boilerplates:
+                    parsed_files.append({"path": path, "content": self.boilerplates["backend_dockerfile"]})
+                elif "backend/requirements.txt" in path and "backend_requirements" in self.boilerplates:
+                    parsed_files.append({"path": path, "content": self.boilerplates["backend_requirements"]})
+                elif "frontend/Dockerfile" in path and "frontend_dockerfile" in self.boilerplates:
+                    parsed_files.append({"path": path, "content": self.boilerplates["frontend_dockerfile"]})
+                elif "frontend/package.json" in path and "frontend_package_json" in self.boilerplates:
+                    parsed_files.append({"path": path, "content": self.boilerplates["frontend_package_json"]})
+                elif ".gitignore" in path and "gitignore" in self.boilerplates:
+                    parsed_files.append({"path": path, "content": self.boilerplates["gitignore"]})
+                elif "README.md" in path and "readme" in self.boilerplates:
+                    parsed_files.append({"path": path, "content": self.boilerplates["readme"]})
                 else:
                     files_to_generate.append(file_def)
             
