@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="https://raw.githubusercontent.com/grsanudeep42-cmd/Orkestrai/main/assets/banner.png" alt="OrkestrAI Header" />
+  <h1>🚀 OrkestrAI</h1>
   
   <h3><em>Empowering Hackathons through Autonomous Multi-Agent Orchestration</em></h3>
 

@@ -83,7 +83,6 @@ credentials/
 # Project Specific
 backend/static/generated/*
 !backend/static/generated/.gitkeep
-bob_sessions/
 
 # Temporary files
 tmp/
