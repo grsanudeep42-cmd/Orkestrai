@@ -110,18 +110,16 @@ async def health_check():
     except Exception as e:
         logger.error("Health check DB failure", error=str(e))
         
-    # Check LLM providers
+    # Check LLM router status
     llm_status = "healthy"
-    from app.llm.provider_router import router as llm_router
-    if not llm_router.providers:
-        llm_status = "unhealthy (no providers configured)"
+    # Note: providers are now created on-the-fly per user
         
     return {
-        "status": "healthy" if db_status == "healthy" and llm_status == "healthy" else "unhealthy",
+        "status": "healthy" if db_status == "healthy" else "unhealthy",
         "version": settings.VERSION,
         "environment": settings.ENVIRONMENT,
         "database": db_status,
-        "llm_providers": llm_status
+        "llm_system": llm_status
     }
 
 # Made with Bob

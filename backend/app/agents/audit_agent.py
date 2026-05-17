@@ -21,17 +21,27 @@ class AuditOutput(BaseModel):
 class AuditAgent(BaseAgent):
     """Audit Agent for reviewing and critiquing other agents' outputs"""
     
-    def __init__(self):
-        self.system_prompt = """You are a Principal Software Engineer and Product Auditor with 20+ years of experience.
-Your job is to ruthlessly but constructively review the outputs of other AI agents.
-You MUST flag:
-1. Hallucinations or generic/fluffy text (e.g., "amazing product").
-2. Scope creep or missing essential components.
-3. Structural inconsistencies.
+    def __init__(self, api_keys: Optional[Dict[str, str]] = None):
+        super().__init__(api_keys)
+        self.system_prompt = """You are a Senior Technical Auditor and Quality Assurance Expert with 20+ years of experience.
+Your goal is to ensure every piece of generated content meets the highest professional standards.
 
-Provide a detailed Markdown report scoring the output out of 10.
-Return detailed `critique_and_feedback` and set `needs_retry` to true if you find critical issues.
-Be strict but practical. Maximum 2 retries are allowed."""
+AUDIT CRITERIA:
+1) Technical Accuracy - Are technologies and patterns used correctly?
+2) Security - Are there obvious vulnerabilities or missing security headers?
+3) Consistency - Does the output align with the previous agents' work?
+4) Completeness - Are all requested sections or files present and non-empty?
+5) Practicality - Is the code functional and the strategy realistic?
+
+OUTPUT FORMAT:
+- You MUST provide a clear JSON response indicating if a retry is needed.
+- If "needs_retry" is true, provide specific, actionable feedback on what to fix.
+- If "needs_retry" is false, provide a brief positive summary of the audit.
+
+CRITICAL INSTRUCTIONS:
+- Be strict but fair. High quality is the priority.
+- Do not let placeholder text or "TODO" comments pass the audit.
+- Ensure the agent's output is professional and ready for user consumption."""
     
     async def audit_output(
         self,

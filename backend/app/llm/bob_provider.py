@@ -1,5 +1,5 @@
 """
-OpenAI Provider
+Bob AI Provider - Specialized high-performance LLM
 """
 import json
 import httpx
@@ -11,14 +11,14 @@ from app.llm.base import BaseProvider, UsageStats
 logger = structlog.get_logger()
 T = TypeVar("T", bound=BaseModel)
 
-class OpenAIProvider(BaseProvider):
-    """OpenAI API Provider using httpx.AsyncClient"""
+class BobProvider(BaseProvider):
+    """Bob API Provider using httpx.AsyncClient (OpenAI-compatible)"""
     
-    def __init__(self, api_key: str, model: str = "gpt-4o"):
-        self._name = "OpenAI"
+    def __init__(self, api_key: str, model: str = "bob-pro-v1"):
+        self._name = "Bob"
         self.api_key = api_key
         self.model = model
-        self.base_url = "https://api.openai.com/v1/chat/completions"
+        self.base_url = "https://api.bob.ai/v1/chat/completions" # Placeholder URL
         
     @property
     def name(self) -> str:
@@ -27,7 +27,8 @@ class OpenAIProvider(BaseProvider):
     async def _make_request(self, messages: list, temperature: float, max_tokens: int, json_mode: bool = False) -> Tuple[str, UsageStats]:
         headers = {
             "Authorization": f"Bearer {self.api_key}",
-            "Content-Type": "application/json"
+            "Content-Type": "application/json",
+            "X-Client": "OrkestrAI"
         }
         
         payload = {
@@ -45,7 +46,7 @@ class OpenAIProvider(BaseProvider):
                 self.base_url,
                 headers=headers,
                 json=payload,
-                timeout=30.0
+                timeout=60.0
             )
             response.raise_for_status()
             data = response.json()
@@ -62,7 +63,7 @@ class OpenAIProvider(BaseProvider):
                 )
                 return content, stats
             else:
-                raise ValueError(f"Unexpected response format from OpenAI: {data}")
+                raise ValueError(f"Unexpected response format from Bob API: {data}")
 
     async def generate_structured(
         self,
@@ -77,7 +78,6 @@ class OpenAIProvider(BaseProvider):
         schema = response_model.model_json_schema()
         schema_instruction = (
             "\n\nYou MUST return a valid JSON object. "
-            "Do NOT wrap it in markdown block quotes like ```json ... ```. "
             f"The JSON object must strictly adhere to the following JSON schema:\n{json.dumps(schema)}"
         )
         full_system_prompt = system_prompt + schema_instruction
@@ -98,7 +98,7 @@ class OpenAIProvider(BaseProvider):
                 )
                 
                 if not content:
-                    raise ValueError("Empty response received from OpenAI")
+                    raise ValueError("Empty response received from Bob API")
                     
                 content = content.strip()
                 if content.startswith("```json"):
@@ -109,7 +109,6 @@ class OpenAIProvider(BaseProvider):
                     content = content[:-3]
                 content = content.strip()
                     
-                # Validate with Pydantic (allowing unescaped control chars like \n in strings)
                 parsed_data = json.loads(content, strict=False)
                 result = response_model.model_validate(parsed_data)
                 return result, stats
@@ -122,7 +121,7 @@ class OpenAIProvider(BaseProvider):
                 logger.error(f"API error on attempt {attempt+1}/{max_retries+1}", error=str(e), provider=self.name)
                 raise e
                 
-        raise ValueError(f"Failed to generate structured output after {max_retries + 1} attempts. Last error: {last_error}")
+        raise ValueError(f"Failed to generate structured output from Bob API after {max_retries + 1} attempts. Last error: {last_error}")
 
     async def generate_text(
         self,

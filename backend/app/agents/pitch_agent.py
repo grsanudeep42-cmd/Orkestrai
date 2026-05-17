@@ -15,21 +15,30 @@ logger = structlog.get_logger()
 class PitchAgent(BaseAgent):
     """Pitch Agent for generating HTML presentations"""
     
-    def __init__(self):
-        self.system_prompt = """You are an elite Startup Founder and Storyteller.
-You MUST generate a complete HTML presentation with MULTIPLE slides covering:
-1) Title slide - Project name and tagline
-2) Problem Statement - The pain point being addressed
-3) Market Opportunity - TAM, SAM, SOM analysis
-4) Solution - How your product solves the problem
-5) Core Features - Key functionality and differentiators
-6) Tech Stack - Technology choices and architecture
-7) Business Model - Revenue streams and pricing
-8) Team and Roadmap - Milestones and go-to-market plan
+    def __init__(self, api_keys: Optional[Dict[str, str]] = None):
+        super().__init__(api_keys)
+        self.system_prompt = """You are an elite Startup Founder, Product Designer, and Storyteller.
+Your goal is to generate a stunning, professional, and self-contained HTML presentation deck.
 
-Each slide must be a separate scrollable section. Include navigation arrows between slides. Use a dark theme with modern typography. Include JavaScript for basic slide navigation (left/right arrows). The presentation MUST NOT use generic placeholder text; derive data from the project inputs. Do NOT generate a single landing page.
+PRESENTATION STRUCTURE:
+1) Title slide - Compelling project name and high-impact tagline.
+2) Problem Statement - Clearly articulate the pain point being addressed.
+3) Market Opportunity - TAM, SAM, SOM analysis with realistic data estimates.
+4) Solution - How this product uniquely solves the problem.
+5) Core Features - Key functionality and technical differentiators.
+6) Tech Stack - Technology choices, architecture, and why they were selected.
+7) Business Model - Revenue streams, pricing strategy, and go-to-market plan.
+8) Roadmap - Future milestones and vision.
 
-Return ONLY raw HTML. No JSON wrapper. No markdown code fences. No explanation. Start your response with <!DOCTYPE html> and end with </html>."""
+TECHNICAL REQUIREMENTS:
+- Return ONLY raw HTML. No JSON wrapper. No markdown code fences.
+- Use a modern, dark-themed CSS (e.g., Tailwind-like utility classes or custom professional CSS).
+- Include JavaScript for smooth slide-to-slide navigation (using keyboard arrows and on-screen buttons).
+- Use professional typography (e.g., Inter, System Fonts).
+- Ensure the presentation is fully responsive and looks great on all screens.
+- Derive all data from the project inputs; do NOT use generic placeholders.
+
+Start your response with <!DOCTYPE html> and end with </html>."""
     
     async def generate_pitch_materials(
         self, 
@@ -40,13 +49,13 @@ Return ONLY raw HTML. No JSON wrapper. No markdown code fences. No explanation. 
         user_input: str,
         preferences: Optional[Dict[str, Any]] = None,
         memory: Optional[Dict[str, Any]] = None,
-        event_callback: Optional[Callable] = None
+        event_callback: Optional[Callable] = None,
+        project_id: Optional[str] = None
     ) -> Dict[str, Any]:
         """
-        Generate pitch materials as an HTML file
+        Generate pitch materials as an HTML content string
         """
         start_time = datetime.utcnow()
-        project_id = memory.get("project_id", str(uuid.uuid4())) if memory else str(uuid.uuid4())
         
         try:
             if event_callback:
@@ -61,36 +70,34 @@ Return ONLY raw HTML. No JSON wrapper. No markdown code fences. No explanation. 
             
             strategy_text = strategy_output if isinstance(strategy_output, str) else json.dumps(strategy_output)
 
-            user_prompt = f"""Based on the project data, create a stunning HTML presentation deck.
+            user_prompt = f"""Create a world-class pitch deck for the following project:
 
 PROJECT IDEA:
 {safe_input}
 
 PRODUCT STRATEGY:
-{strategy_text[:1000]}
+{strategy_text[:1500]}
 
-IMPLEMENTATION RESULTS:
-Code generated: {implementation_output.get("files_generated", 0)} files
-GitHub Repo: {github_output.get("repository_url", "")}
+IMPLEMENTATION HIGHLIGHTS:
+- Codebase: {implementation_output.get("files_generated", 0)} professional source files generated.
+- GitHub Integration: {github_output.get("repository_url", "Prepared for deployment")}.
 
-Generate the full HTML content.
-"""
+Generate the complete, self-contained HTML presentation now."""
             
             if event_callback:
                 await event_callback({
                     "type": "agent_thinking",
                     "agent": "PitchAgent",
-                    "message": "Designing HTML presentation deck...",
+                    "message": "Crafting the professional presentation deck...",
                     "timestamp": datetime.utcnow().isoformat()
                 })
-            
-            logger.info("Calling LLM Provider Router for PitchAgent")
             
             raw_response = await llm_router.generate_text(
                 system_prompt=self.system_prompt,
                 user_prompt=user_prompt,
+                api_keys=self.api_keys,
                 target_agent="PitchAgent",
-                temperature=0.6,
+                temperature=0.4,
                 max_tokens=8000,
                 event_callback=event_callback
             )
@@ -100,22 +107,11 @@ Generate the full HTML content.
                 html = html.split('\n', 1)[1].rsplit('```', 1)[0].strip()
                 
             if not html or "<html" not in html.lower():
-                raise ValueError("Response does not contain valid HTML.")
+                raise ValueError("Generated response is not valid HTML.")
             
-            # Save HTML file
-            base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-            static_dir = os.path.join(base_dir, "static", "generated")
-            os.makedirs(static_dir, exist_ok=True)
-            html_filename = f"{project_id}_pitch.html"
-            html_path = os.path.join(static_dir, html_filename)
-            with open(html_path, "w") as f:
-                f.write(html)
-            
-            html_url = f"/static/generated/{html_filename}"
-
             output_data = {
-                "presentation_url": html_url,
-                "message": "HTML pitch deck generated successfully."
+                "html_content": html,
+                "message": "Professional HTML pitch deck generated successfully."
             }
             
             end_time = datetime.utcnow()
@@ -137,7 +133,6 @@ Generate the full HTML content.
                     "timestamp": end_time.isoformat()
                 })
             
-            logger.info("Pitch materials complete", duration_ms=duration_ms)
             return output_data
             
         except Exception as e:
@@ -151,19 +146,7 @@ Generate the full HTML content.
                     "timestamp": datetime.utcnow().isoformat()
                 })
             
-            fallback = self._create_fallback_pitch(strategy_output, f"Error: {str(e)}")
-            base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-            static_dir = os.path.join(base_dir, "static", "generated")
-            os.makedirs(static_dir, exist_ok=True)
-            html_filename = f"{project_id}_pitch_fallback.html"
-            html_path = os.path.join(static_dir, html_filename)
-            with open(html_path, "w") as f:
-                f.write(fallback.get("html_content", "<html></html>"))
-                
-            return {
-                "presentation_url": f"/static/generated/{html_filename}",
-                "message": "Fallback generated."
-            }
+            raise e
     
     def _create_fallback_pitch(self, strategy_output: Dict[str, Any] | str, raw_output: str = "") -> Dict[str, Any]:
         """Create fallback pitch"""

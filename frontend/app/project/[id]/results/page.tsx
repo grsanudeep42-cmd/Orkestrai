@@ -3,8 +3,9 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Download, CheckCircle2, AlertCircle, Loader2, FileText, Code, FileJson, GitBranch } from "lucide-react";
+import { ArrowLeft, Download, CheckCircle2, AlertCircle, Loader2, FileText, Code, FileJson, GitBranch, Terminal, ChevronDown, ChevronUp, RefreshCw, Settings } from "lucide-react";
 import { apiClient } from "@/lib/api/client";
+import { useWebSocket } from "@/hooks/use-websocket";
 import { Project, GeneratedArtifact } from "@/types";
 import { formatDistanceToNow } from "date-fns";
 import ReactMarkdown from "react-markdown";
@@ -16,7 +17,7 @@ const parseUTCDate = (dateString: string | undefined | null) => {
   return new Date(dateString.endsWith('Z') ? dateString : dateString + 'Z');
 };
 
-const ArtifactRenderer = ({ type, content }: { type: string; content: string }) => {
+const ArtifactRenderer = ({ type, content, projectId, events }: { type: string; content: string; projectId: string; events: any[] }) => {
   // Try to parse as JSON first in case some agents still output JSON
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let data: any;
@@ -36,8 +37,8 @@ const ArtifactRenderer = ({ type, content }: { type: string; content: string }) 
 
   // If it's a known structured agent that outputs URLs/JSON, render custom
   if (isJson) {
-    if (type === "implementation_plan" && (data.zip_path || data.files)) {
-      const zipUrl = data.zip_url ? `http://localhost:8000${data.zip_url}` : undefined;
+    if (type === "implementation_plan" && (data.files || data.file_tree)) {
+      const downloadUrl = `http://localhost:8000/api/v1/projects/${projectId}/download`;
       return (
         <div className="space-y-6">
           <div className="bg-surface border border-border p-6 rounded-lg">
@@ -49,15 +50,13 @@ const ArtifactRenderer = ({ type, content }: { type: string; content: string }) 
                   <p className="text-sm text-muted-foreground">{data.files_generated || (data.files?.length || 0)} files created</p>
                 </div>
               </div>
-              {zipUrl && (
-                <a href={zipUrl} download className="inline-flex items-center space-x-2 bg-warning text-background px-4 py-2 rounded-md font-bold hover:bg-warning/90 transition-colors text-sm">
-                  <Download className="w-4 h-4" />
-                  <span>Download ZIP</span>
-                </a>
-              )}
+              <a href={downloadUrl} className="inline-flex items-center space-x-2 bg-warning text-background px-4 py-2 rounded-md font-bold hover:bg-warning/90 transition-colors text-sm">
+                <Download className="w-4 h-4" />
+                <span>Download ZIP</span>
+              </a>
             </div>
             
-            <CodeFilesView files={data.files || []} zipUrl={zipUrl} />
+            <CodeFilesView files={data.files || []} zipUrl={downloadUrl} />
           </div>
           
           <div className="p-4 bg-muted/10 border border-border rounded-lg">
@@ -73,6 +72,24 @@ const ArtifactRenderer = ({ type, content }: { type: string; content: string }) 
     
     if (type === "github_setup") {
       const isPending = !data.repository_url || data.repository_url.includes("setup-pending");
+      // eslint-disable-next-line react-hooks/rules-of-hooks
+      const [isRetrying, setIsRetrying] = useState(false);
+      // eslint-disable-next-line react-hooks/rules-of-hooks
+      const [retryStatus, setRetryStatus] = useState<string | null>(null);
+
+      const handleRetryGithub = async () => {
+        setIsRetrying(true);
+        setRetryStatus(null);
+        try {
+          await apiClient.request(`/api/v1/projects/${projectId}/github-retry`, { method: "POST" });
+          setRetryStatus("success");
+          window.location.reload(); // Refresh to show new artifact data
+        } catch (err: any) {
+          setRetryStatus(err.message || "Retry failed");
+        } finally {
+          setIsRetrying(false);
+        }
+      };
       
       return (
         <div className="space-y-6">
@@ -82,16 +99,42 @@ const ArtifactRenderer = ({ type, content }: { type: string; content: string }) 
               <>
                 <h3 className="text-xl font-bold text-foreground">GitHub Setup Recommended</h3>
                 <p className="text-muted-foreground">GitHub token not configured. Below are the recommended workflows and issues for your manual setup.</p>
+                <div className="flex flex-col items-center space-y-3">
+                  <Link href="/settings" className="text-primary hover:underline text-sm font-bold">
+                    Connect GitHub in Settings
+                  </Link>
+                  <button 
+                    onClick={handleRetryGithub}
+                    disabled={isRetrying}
+                    className="flex items-center space-x-2 bg-primary/10 hover:bg-primary/20 text-primary px-6 py-2 rounded-lg font-bold border border-primary/30 transition-all disabled:opacity-50"
+                  >
+                    {isRetrying ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
+                    <span>Retry GitHub Integration</span>
+                  </button>
+                </div>
               </>
             ) : (
               <>
                 <h3 className="text-xl font-bold text-foreground">GitHub Repository Created</h3>
                 <p className="text-muted-foreground">The generated code has been pushed to your new repository.</p>
-                <a href={data.repository_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center space-x-2 bg-success text-background px-6 py-3 rounded-md font-bold hover:bg-success/90 transition-colors">
-                  <GitBranch className="w-5 h-5" />
-                  <span>View Repository on GitHub</span>
-                </a>
+                <div className="flex justify-center space-x-4">
+                  <a href={data.repository_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center space-x-2 bg-success text-background px-6 py-3 rounded-md font-bold hover:bg-success/90 transition-colors">
+                    <GitBranch className="w-5 h-5" />
+                    <span>View Repository on GitHub</span>
+                  </a>
+                  <button 
+                    onClick={handleRetryGithub}
+                    disabled={isRetrying}
+                    className="flex items-center space-x-2 bg-muted/20 hover:bg-muted/30 text-foreground px-6 py-3 rounded-md font-bold transition-all disabled:opacity-50 border border-border"
+                  >
+                    {isRetrying ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
+                    <span>Push to Repo Again</span>
+                  </button>
+                </div>
               </>
+            )}
+            {retryStatus && retryStatus !== "success" && (
+              <p className="text-error text-xs font-mono">{retryStatus}</p>
             )}
           </div>
 
@@ -127,13 +170,25 @@ const ArtifactRenderer = ({ type, content }: { type: string; content: string }) 
 
           <div className="p-4 bg-muted/5 border border-border rounded-lg">
             <h4 className="font-bold text-foreground mb-2 text-sm">GitHub Operations Log</h4>
-            <pre className="font-mono text-[10px] text-muted-foreground whitespace-pre-wrap max-h-40 overflow-y-auto">{data.message || "Ready for integration."}</pre>
+            <div className="font-mono text-[10px] text-muted-foreground whitespace-pre-wrap max-h-40 overflow-y-auto space-y-1">
+              {events.filter(e => e.agent === "GitHubAgent").length > 0 ? (
+                events.filter(e => e.agent === "GitHubAgent").map((e, idx) => (
+                  <div key={idx} className="border-l border-primary/30 pl-2">
+                    <span className="text-primary/70 mr-2">[{new Date(e.timestamp).toLocaleTimeString()}]</span>
+                    {e.message || e.type}
+                  </div>
+                ))
+              ) : (
+                <div>{data.message || "Ready for integration."}</div>
+              )}
+            </div>
           </div>
         </div>
       );
     }
 
-    if (type === "pitch_deck" && data.presentation_url) {
+    if (type === "pitch_deck") {
+      const pitchUrl = `http://localhost:8000/api/v1/projects/${projectId}/pitch`;
       return (
         <div className="space-y-4">
           <div className="bg-surface border border-border p-6 rounded-lg text-center space-y-4">
@@ -141,10 +196,10 @@ const ArtifactRenderer = ({ type, content }: { type: string; content: string }) 
             <h3 className="text-xl font-bold text-foreground">Pitch Deck Generated</h3>
             <p className="text-muted-foreground">A self-contained HTML presentation has been created.</p>
             <div className="flex justify-center space-x-4">
-              <a href={`http://localhost:8000${data.presentation_url}`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center space-x-2 bg-primary text-background px-6 py-3 rounded-md font-bold hover:bg-primary-hover transition-colors">
+              <a href={pitchUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center space-x-2 bg-primary text-background px-6 py-3 rounded-md font-bold hover:bg-primary-hover transition-colors">
                 <span>View Presentation</span>
               </a>
-              <a href={`http://localhost:8000${data.presentation_url}`} download className="inline-flex items-center space-x-2 border border-primary text-primary px-6 py-3 rounded-md font-bold hover:bg-primary/10 transition-colors">
+              <a href={pitchUrl} download={`${projectId}_pitch.html`} className="inline-flex items-center space-x-2 border border-primary text-primary px-6 py-3 rounded-md font-bold hover:bg-primary/10 transition-colors">
                 <Download className="w-4 h-4" />
                 <span>Download HTML</span>
               </a>
@@ -178,15 +233,41 @@ export default function ResultsPage() {
   
   const [project, setProject] = useState<Project | null>(null);
   const [artifacts, setArtifacts] = useState<GeneratedArtifact[]>([]);
+  const [logs, setLogs] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<string>("");
+  const [showLogs, setShowLogs] = useState(false);
+  
+  const { events: liveEvents } = useWebSocket(projectId);
+
+  // Combine live events and historical logs
+  const mappedHistoricalLogs = logs.map(log => ({
+    type: log.status === 'completed' ? 'agent_complete' : 
+          log.status === 'failed' ? 'error' : 
+          log.agent_name === 'AuditAgent' ? 'agent_critique' : 'agent_start',
+    agent: log.agent_name,
+    message: log.output_preview || log.action.replace(/_/g, ' '),
+    timestamp: log.started_at,
+    duration_ms: log.duration_ms,
+    data: log.full_output
+  }));
+
+  const events = [...mappedHistoricalLogs, ...liveEvents].filter((event, index, self) => 
+    index === self.findIndex((e) => (
+      e.timestamp === event.timestamp && e.agent === event.agent && e.message === event.message
+    ))
+  );
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const projectData = await apiClient.getProject(projectId);
+        const [projectData, logsData] = await Promise.all([
+          apiClient.getProject(projectId),
+          apiClient.getLogs(projectId)
+        ]);
         setProject(projectData);
+        setLogs(logsData);
         
         if (projectData.status === "completed") {
           try {
@@ -316,10 +397,15 @@ export default function ResultsPage() {
       <header className="border-b border-border bg-background/80 backdrop-blur-xl sticky top-0 z-50">
         <div className="container mx-auto px-6 py-4">
           <div className="flex items-center justify-between mb-4">
-            <Link href="/" className="flex items-center space-x-2 text-muted-foreground hover:text-primary transition-colors">
-              <ArrowLeft className="w-5 h-5" />
-              <span className="font-mono text-sm">Back to Dashboard</span>
-            </Link>
+            <div className="flex items-center space-x-4">
+              <Link href="/" className="flex items-center space-x-2 text-muted-foreground hover:text-primary transition-colors">
+                <ArrowLeft className="w-5 h-5" />
+                <span className="font-mono text-sm">Back to Dashboard</span>
+              </Link>
+              <Link href="/settings" className="p-2 text-muted-foreground hover:text-primary transition-colors" title="Settings">
+                <Settings className="w-5 h-5" />
+              </Link>
+            </div>
             {project.status === "completed" && (
               <div className="flex items-center space-x-2 text-success">
                 <CheckCircle2 className="w-5 h-5" />
@@ -410,7 +496,7 @@ export default function ResultsPage() {
 
                   {/* Artifact Content */}
                   <div className="p-8 bg-background min-h-[500px]">
-                    <ArtifactRenderer type={activeArtifact.artifact_type} content={activeArtifact.content} />
+                    <ArtifactRenderer type={activeArtifact.artifact_type} content={activeArtifact.content} projectId={projectId as string} events={events} />
                   </div>
                 </div>
               )}
@@ -418,6 +504,57 @@ export default function ResultsPage() {
 
           </div>
         )}
+
+        {/* Logs Section */}
+        <div className="mt-12">
+          <button 
+            onClick={() => setShowLogs(!showLogs)}
+            className="w-full flex items-center justify-between p-6 bg-surface border border-border rounded-xl hover:border-primary/30 transition-all group shadow-sm"
+          >
+            <div className="flex items-center space-x-3">
+              <Terminal className="w-6 h-6 text-primary" />
+              <div className="text-left">
+                <h3 className="text-lg font-bold uppercase tracking-tight">Orchestration History</h3>
+                <p className="text-xs text-muted-foreground font-mono">Real-time agent logs preserved for audit</p>
+              </div>
+            </div>
+            {showLogs ? <ChevronUp className="w-5 h-5 text-muted-foreground" /> : <ChevronDown className="w-5 h-5 text-muted-foreground" />}
+          </button>
+
+          {showLogs && (
+            <div className="mt-4 bg-background border border-border rounded-xl overflow-hidden shadow-2xl">
+              <div className="p-2 border-b border-border bg-surface flex items-center space-x-2">
+                <div className="w-2 h-2 rounded-full bg-error" />
+                <div className="w-2 h-2 rounded-full bg-warning" />
+                <div className="w-2 h-2 rounded-full bg-success" />
+                <span className="text-[10px] font-mono text-muted-foreground ml-2 uppercase tracking-widest">Agent Trace Console</span>
+              </div>
+              <div className="p-6 space-y-4 max-h-[500px] overflow-y-auto font-mono text-sm bg-background/50">
+                {logs.length === 0 ? (
+                  <p className="text-muted-foreground italic text-center py-8">No trace logs available.</p>
+                ) : (
+                  logs.map((log, idx) => (
+                    <div key={idx} className="border-l-2 border-primary/20 pl-4 py-2 group hover:border-primary transition-colors">
+                      <div className="flex items-center space-x-3 mb-1">
+                        <span className="text-[10px] text-muted-foreground">{new Date(log.started_at).toLocaleTimeString()}</span>
+                        <span className={`text-[10px] font-bold uppercase px-1.5 py-0.5 rounded ${
+                          log.status === 'completed' ? 'bg-success/10 text-success' : 
+                          log.status === 'failed' ? 'bg-error/10 text-error' : 'bg-primary/10 text-primary'
+                        }`}>
+                          {log.agent_name}
+                        </span>
+                        <span className="text-foreground font-bold tracking-tight">{log.action.replace(/_/g, ' ')}</span>
+                      </div>
+                      <div className="text-muted-foreground text-xs leading-relaxed line-clamp-2 group-hover:line-clamp-none transition-all">
+                        {log.output_preview || (log.full_output?.message) || "Action processed successfully."}
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          )}
+        </div>
 
         {/* Actions */}
         <div className="mt-12 flex justify-center space-x-4 border-t border-border pt-8">

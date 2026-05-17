@@ -2,10 +2,18 @@
 Base AI Provider Abstraction
 """
 from abc import ABC, abstractmethod
-from typing import Dict, Any, Optional, Type, TypeVar
+from typing import Dict, Any, Optional, Type, TypeVar, Tuple
 from pydantic import BaseModel
 
 T = TypeVar("T", bound=BaseModel)
+
+class UsageStats(BaseModel):
+    prompt_tokens: int = 0
+    completion_tokens: int = 0
+    total_tokens: int = 0
+    cost: float = 0.0
+    provider: str = ""
+    model: str = ""
 
 class BaseProvider(ABC):
     """Abstract base class for AI providers"""
@@ -24,7 +32,7 @@ class BaseProvider(ABC):
         response_model: Type[T],
         temperature: float = 0.7,
         max_tokens: int = 2000,
-    ) -> T:
+    ) -> Tuple[T, UsageStats]:
         """
         Generate structured output adhering to a Pydantic schema
         """
@@ -37,7 +45,7 @@ class BaseProvider(ABC):
         user_prompt: str,
         temperature: float = 0.7,
         max_tokens: int = 2000,
-    ) -> str:
+    ) -> Tuple[str, UsageStats]:
         """
         Generate raw text output
         """

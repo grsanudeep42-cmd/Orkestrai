@@ -18,6 +18,8 @@ from app.config import settings
 from app.llm.provider_router import router as llm_router
 from app.agents.base_agent import BaseAgent
 
+from app.db.models.user import User
+
 logger = structlog.get_logger()
 
 class GithubWorkflow(BaseModel):
@@ -33,13 +35,22 @@ class GithubOutputPlan(BaseModel):
 class GitHubAgent(BaseAgent):
     """GitHub Agent for creating repos and pushing code"""
     
-    def __init__(self):
-        self.system_prompt = """You are an elite DevOps and Open Source Maintainer.
-You must define the repository name, description, CI/CD workflow YAML files, and issue trackers.
-- DO NOT use generic placeholder text.
-- Provide actual YAML for workflows.
-- Create 5-10 real GitHub Issues based on implementation phases.
-- If you receive feedback from the AuditAgent, correct your course immediately."""
+    def __init__(self, api_keys: Optional[Dict[str, str]] = None):
+        super().__init__(api_keys)
+        self.system_prompt = """You are an elite DevOps Engineer and Open Source Maintainer.
+Your goal is to define the ideal repository setup and automation for a new project.
+
+CORE RESPONSIBILITIES:
+1) Repository Name & Description - Professional, SEO-friendly, and descriptive.
+2) CI/CD Workflows - Practical GitHub Action YAMLs for testing, linting, and deployment.
+3) Issue Backlog - 5-10 detailed, actionable issues covering immediate next steps.
+4) Branching Strategy - Define a clear main/develop/feature workflow.
+
+CRITICAL INSTRUCTIONS:
+- Do NOT use generic placeholders.
+- Ensure YAML workflows use correct paths and tools based on the actual file tree.
+- Issues must have clear titles and descriptive bodies.
+- Output should be structured and ready for direct API integration or manual setup."""
     
     async def generate_github_recommendations(
         self, 
@@ -49,7 +60,8 @@ You must define the repository name, description, CI/CD workflow YAML files, and
         user_input: str,
         preferences: Optional[Dict[str, Any]] = None,
         memory: Optional[Dict[str, Any]] = None,
-        event_callback: Optional[Callable] = None
+        event_callback: Optional[Callable] = None,
+        current_user: Optional[User] = None
     ) -> Dict[str, Any]:
         """
         Create a GitHub repository, push code, and set up workflows/issues
@@ -138,8 +150,10 @@ Create comprehensive GitHub details including:
             issues_created = 0
             workflows_created = 0
 
-            github_token = settings.GITHUB_TOKEN
-            if github_token and github_token != "your_github_personal_access_token_here":
+            # Use user's token from database
+            github_token = current_user.github_token
+            
+            if github_token:
                 try:
                     g = Github(github_token)
                     user = g.get_user()
@@ -206,18 +220,27 @@ Create comprehensive GitHub details including:
                     # Add workflows after pushing code
                     for wf in github_plan.get("workflows", []):
                         try:
-                            yaml.safe_load(wf['content'])
+                            # Cleanup literal \n if present (common LLM artifact)
+                            wf_content = wf.get('content', '')
+                            if "\\n" in wf_content and "\n" not in wf_content:
+                                wf_content = wf_content.replace("\\n", "\n")
+                            
+                            # Final validation of YAML
+                            try:
+                                yaml.safe_load(wf_content)
+                            except yaml.YAMLError as ye:
+                                logger.warning(f"Invalid YAML for workflow {wf.get('name')}: {ye}")
+                                continue
+
                             repo.create_file(
-                                path=f".github/workflows/{wf['name']}.yml",
-                                message=f"Add {wf['name']} workflow",
-                                content=wf['content'],
+                                path=f".github/workflows/{wf.get('name')}.yml",
+                                message=f"Add {wf.get('name')} workflow",
+                                content=wf_content,
                                 branch="main"
                             )
                             workflows_created += 1
-                        except yaml.YAMLError as ye:
-                            logger.warning(f"Invalid YAML for workflow {wf['name']}: {ye}")
                         except Exception as e:
-                            logger.warning(f"Failed to add workflow {wf['name']}: {e}")
+                            logger.warning(f"Failed to add workflow {wf.get('name')}: {e}")
 
                     # Create Develop branch
                     try:
@@ -274,7 +297,11 @@ Create comprehensive GitHub details including:
                     "main_branch": "main",
                     "development_branch": "develop",
                     "feature_branches": "feature/*"
-                }
+                },
+                "message": f"Successfully created repository '{github_plan.get('repository_name')}' on GitHub. "
+                           f"Pushed codebase and {workflows_created} CI/CD workflows. "
+                           f"Created {issues_created} issues in the backlog. "
+                           f"Repository is ready for development."
             }
             
             end_time = datetime.utcnow()
@@ -310,7 +337,7 @@ Create comprehensive GitHub details including:
                     "timestamp": datetime.utcnow().isoformat()
                 })
             
-            return self._create_fallback_github(strategy_output, architecture_output, implementation_output, f"Error: {str(e)}")
+            raise e
     
     def _create_fallback_github(
         self, 

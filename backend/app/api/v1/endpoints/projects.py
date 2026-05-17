@@ -1,15 +1,23 @@
 """
 Project API endpoints
 """
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Response, BackgroundTasks
+from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from typing import List
+import io
+import zipfile
+import json
 from app.db.session import get_db
+from app.api.v1.endpoints.auth import get_current_user
 from app.db.models.project import Project
+from app.db.models.user import User
+from app.db.models.agent_log import AgentLog
 from app.db.models.generated_artifact import GeneratedArtifact
 from app.schemas.project import ProjectCreate, ProjectResponse, ProjectListResponse
 from app.schemas.artifact import ArtifactResponse
+from app.schemas.agent import AgentLogResponse
 from datetime import datetime
 import structlog
 
@@ -21,16 +29,18 @@ router = APIRouter()
 @router.post("", response_model=ProjectResponse, status_code=status.HTTP_201_CREATED)
 async def create_project(
     project_data: ProjectCreate,
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
 ):
     """
     Create a new project and start orchestration
     """
-    logger.info("Creating new project", name=project_data.name)
+    logger.info("Creating new project", name=project_data.name, user=current_user.username)
     
     # Create project
     project = Project(
         name=project_data.name,
+        user_id=current_user.id,
         description=project_data.description,
         user_input=project_data.user_input,
         preferences=project_data.preferences,
@@ -53,13 +63,14 @@ async def create_project(
 @router.get("/{project_id}", response_model=ProjectResponse)
 async def get_project(
     project_id: str,
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
 ):
     """
     Get project details by ID
     """
     result = await db.execute(
-        select(Project).where(Project.id == project_id)
+        select(Project).where(Project.id == project_id, Project.user_id == current_user.id)
     )
     project = result.scalar_one_or_none()
     
@@ -75,14 +86,15 @@ async def get_project(
 @router.get("/{project_id}/artifacts", response_model=List[ArtifactResponse])
 async def get_project_artifacts(
     project_id: str,
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
 ):
     """
     Get all generated artifacts for a project
     """
-    # First check if project exists
+    # First check if project exists and belongs to user
     result = await db.execute(
-        select(Project).where(Project.id == project_id)
+        select(Project).where(Project.id == project_id, Project.user_id == current_user.id)
     )
     if not result.scalar_one_or_none():
         raise HTTPException(
@@ -99,7 +111,14 @@ async def get_project_artifacts(
     
     response = []
     for art in artifacts:
-        content_str = art.content if isinstance(art.content, str) else str(art.content)
+        if isinstance(art.content, dict):
+            if "markdown" in art.content:
+                content_str = art.content["markdown"]
+            else:
+                content_str = json.dumps(art.content)
+        else:
+            content_str = str(art.content)
+            
         file_path = "strategy.md" if art.artifact_type == "strategy" else f"{art.artifact_type}.txt"
         response.append(
             ArtifactResponse(
@@ -120,18 +139,20 @@ async def get_project_artifacts(
 async def list_projects(
     limit: int = 10,
     offset: int = 0,
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
 ):
     """
-    List all projects with pagination
+    List all projects for the current user with pagination
     """
-    # Get total count
-    count_result = await db.execute(select(Project))
+    # Get total count for user
+    count_result = await db.execute(select(Project).where(Project.user_id == current_user.id))
     total = len(count_result.scalars().all())
     
     # Get paginated projects
     result = await db.execute(
         select(Project)
+        .where(Project.user_id == current_user.id)
         .order_by(Project.created_at.desc())
         .limit(limit)
         .offset(offset)
@@ -149,13 +170,14 @@ async def list_projects(
 @router.delete("/{project_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_project(
     project_id: str,
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
 ):
     """
     Delete a project
     """
     result = await db.execute(
-        select(Project).where(Project.id == project_id)
+        select(Project).where(Project.id == project_id, Project.user_id == current_user.id)
     )
     project = result.scalar_one_or_none()
     
@@ -171,5 +193,251 @@ async def delete_project(
     logger.info("Project deleted", project_id=project_id)
     
     return None
+
+
+@router.get("/{project_id}/download")
+async def download_project_code(
+    project_id: str,
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Generate and stream a ZIP file of the project code from the database
+    """
+    # 1. Verify project exists
+    project_result = await db.execute(select(Project).where(Project.id == project_id))
+    project = project_result.scalar_one_or_none()
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    # 2. Get code artifacts
+    art_result = await db.execute(
+        select(GeneratedArtifact)
+        .where(GeneratedArtifact.project_id == project_id)
+        .where(GeneratedArtifact.artifact_type == "implementation_plan")
+    )
+    artifact = art_result.scalar_one_or_none()
+    
+    # Safety check for content type
+    files = []
+    if artifact and isinstance(artifact.content, dict):
+        files = artifact.content.get("files", [])
+    
+    if not files:
+        # Try finding any artifact with files
+        all_art_result = await db.execute(
+            select(GeneratedArtifact)
+            .where(GeneratedArtifact.project_id == project_id)
+        )
+        all_artifacts = all_art_result.scalars().all()
+        for a in all_artifacts:
+            if isinstance(a.content, dict) and a.content.get("files"):
+                files.extend(a.content.get("files"))
+        
+        if not files:
+            raise HTTPException(status_code=404, detail="No code files found for this project. Legacy projects might not support memory-efficient download.")
+
+    # 3. Create ZIP in memory
+    zip_buffer = io.BytesIO()
+    with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zip_file:
+        for file_obj in files:
+            path = file_obj.get("path")
+            content = file_obj.get("content", "")
+            if path and content:
+                zip_file.writestr(path, content)
+    
+    zip_buffer.seek(0)
+    
+    # 4. Stream response
+    filename = f"{project.name.lower().replace(' ', '-')}-code.zip"
+    return StreamingResponse(
+        zip_buffer,
+        media_type="application/x-zip-compressed",
+        headers={"Content-Disposition": f"attachment; filename={filename}"}
+    )
+
+
+@router.get("/{project_id}/pitch")
+async def get_project_pitch(
+    project_id: str,
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Serve the generated pitch deck as raw HTML from the database
+    """
+    art_result = await db.execute(
+        select(GeneratedArtifact)
+        .where(GeneratedArtifact.project_id == project_id)
+        .where(GeneratedArtifact.artifact_type == "pitch_deck")
+    )
+    artifact = art_result.scalar_one_or_none()
+    
+    if not artifact or not artifact.content.get("html_content"):
+        raise HTTPException(status_code=404, detail="Pitch deck not found")
+
+    return Response(
+        content=artifact.content.get("html_content"),
+        media_type="text/html"
+    )
+
+
+from app.agents.github_agent import GitHubAgent
+
+
+@router.get("/{project_id}/logs", response_model=List[AgentLogResponse])
+async def get_project_logs(
+    project_id: str,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Get historical orchestration logs for a project
+    """
+    # First check if project exists and belongs to user
+    result = await db.execute(
+        select(Project).where(Project.id == project_id, Project.user_id == current_user.id)
+    )
+    if not result.scalar_one_or_none():
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    log_result = await db.execute(
+        select(AgentLog)
+        .where(AgentLog.project_id == project_id)
+        .order_by(AgentLog.started_at.asc())
+    )
+    logs = log_result.scalars().all()
+    return logs
+
+
+async def run_github_retry(project_id: str, user_id: str):
+    """
+    Background task to retry GitHub integration
+    """
+    from app.db.session import AsyncSessionLocal
+    from app.api.v1.endpoints.websocket import manager
+    
+    async with AsyncSessionLocal() as db:
+        try:
+            # 1. Fetch project and user
+            proj_result = await db.execute(select(Project).where(Project.id == project_id))
+            project = proj_result.scalar_one_or_none()
+            
+            user_result = await db.execute(select(User).where(User.id == user_id))
+            current_user = user_result.scalar_one_or_none()
+            
+            if not project or not current_user:
+                logger.error("Project or User not found for GitHub retry", project_id=project_id, user_id=user_id)
+                return
+
+            # 2. Get necessary artifacts for GitHubAgent
+            art_result = await db.execute(
+                select(GeneratedArtifact).where(GeneratedArtifact.project_id == project_id)
+            )
+            artifacts = art_result.scalars().all()
+            
+            strategy = next((a.content for a in artifacts if a.artifact_type == "strategy"), None)
+            architecture = next((a.content for a in artifacts if a.artifact_type == "architecture"), None)
+            implementation = next((a.content for a in artifacts if a.artifact_type == "implementation_plan"), None)
+            
+            if not implementation:
+                logger.error("Implementation plan not found for GitHub retry", project_id=project_id)
+                return
+
+            # Update artifact message to show progress
+            existing_github_art = next((a for a in artifacts if a.artifact_type == "github_setup"), None)
+            if existing_github_art:
+                if isinstance(existing_github_art.content, dict):
+                    existing_github_art.content["message"] = "GitHub integration is being retried... please check the Orchestration History console below for live logs."
+                else:
+                    existing_github_art.content = {"message": "GitHub integration is being retried... please check the Orchestration History console below for live logs.", "repository_url": "setup-pending"}
+                
+                from sqlalchemy.orm.attributes import flag_modified
+                flag_modified(existing_github_art, "content")
+                await db.commit()
+
+            # 3. Initialize GitHub Agent
+            github_agent = GitHubAgent()
+            
+            # Define a simple log callback
+            async def log_event(event):
+                logger.info("GitHub Retry Event", project_id=project_id, event_data=event)
+                
+                # Broadcast via WebSocket for UI updates
+                await manager.broadcast_to_project(project_id, {
+                    "project_id": project_id,
+                    "timestamp": datetime.utcnow().isoformat(),
+                    **event
+                })
+
+                # Optionally save to AgentLog table
+                if event["type"] == "agent_output":
+                    log = AgentLog(
+                        project_id=project_id,
+                        agent_name="GitHubAgent",
+                        action="github_retry",
+                        status="completed",
+                        started_at=datetime.utcnow(),
+                        completed_at=datetime.utcnow(),
+                        full_output=event["data"]
+                    )
+                    db.add(log)
+
+            # 4. Run Agent
+            github_result = await github_agent.generate_github_recommendations(
+                strategy_output=strategy or "Strategy missing",
+                architecture_output=architecture or "Architecture missing",
+                implementation_output=implementation,
+                user_input=project.user_input,
+                current_user=current_user,
+                event_callback=log_event
+            )
+            
+            # 5. Update or create the github_setup artifact
+            # Re-fetch or use existing
+            if existing_github_art:
+                existing_github_art.content = github_result
+                existing_github_art.generated_at = datetime.utcnow()
+                flag_modified(existing_github_art, "content")
+            else:
+                db.add(GeneratedArtifact(
+                    project_id=project_id,
+                    generated_by="GitHubAgent",
+                    artifact_type="github_setup",
+                    content=github_result
+                ))
+                
+            await db.commit()
+            logger.info("GitHub retry background task complete", project_id=project_id)
+        except Exception as e:
+            logger.error("GitHub background retry failed", error=str(e), project_id=project_id)
+
+
+@router.post("/{project_id}/github-retry")
+async def retry_github_integration(
+    project_id: str,
+    background_tasks: BackgroundTasks,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Retry the GitHub integration phase for a project
+    """
+    # 1. Verify project exists and belongs to user
+    result = await db.execute(
+        select(Project).where(Project.id == project_id, Project.user_id == current_user.id)
+    )
+    project = result.scalar_one_or_none()
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    # 2. Check for implementation plan
+    art_result = await db.execute(
+        select(GeneratedArtifact).where(GeneratedArtifact.project_id == project_id, GeneratedArtifact.artifact_type == "implementation_plan")
+    )
+    if not art_result.scalar_one_or_none():
+        raise HTTPException(status_code=400, detail="Cannot retry GitHub: Project implementation not found")
+
+    background_tasks.add_task(run_github_retry, project_id, current_user.id)
+    
+    return {"message": "GitHub retry started"}
 
 # Made with Bob

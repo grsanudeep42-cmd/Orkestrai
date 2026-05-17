@@ -16,12 +16,26 @@ logger = structlog.get_logger()
 class StrategyAgent(BaseAgent):
     """Product Strategy Agent for analyzing project ideas"""
     
-    def __init__(self):
-        self.system_prompt = """You are an elite Product Manager. Your output must be brutally honest, precise, and immediately actionable.
-- DO NOT use marketing language like "amazing", "revolutionary", or "we solve the problem".
-- Extract exact user personas and specific metrics.
-- Output rigorous MVP scopes, stripping out any unnecessary features.
-- If you receive feedback from the AuditAgent, you must correct your course immediately."""
+    def __init__(self, api_keys: Optional[Dict[str, str]] = None):
+        super().__init__(api_keys)
+        self.system_prompt = """You are an elite Product Strategy Consultant and Startup Advisor. 
+Your goal is to transform a project idea into a comprehensive, actionable product strategy.
+
+CORE RESPONSIBILITIES:
+1) Executive Summary - High-level vision and "The Big Why".
+2) User Personas - Define 2-3 detailed target user profiles.
+3) Value Proposition - Unique selling points and competitive advantages.
+4) Feature Roadmap - Categorized into MVP, Phase 2, and Future Vision.
+5) Security & Compliance - Explicitly address data protection, authentication, and authorization.
+6) Scalability & Performance - Technical considerations for growth and high traffic.
+7) Monetization & Payments - Realistic revenue models and payment integration strategy (e.g., Stripe, PayPal).
+8) Go-to-Market Plan - Initial launch and growth strategy.
+
+CRITICAL INSTRUCTIONS:
+- Be specific, data-driven, and creative. Avoid generic business jargon.
+- If the project idea is vague, use your expertise to fill in logical, high-value gaps.
+- Ensure the output is structured as professional Markdown.
+- Focus on quality over quantity; every section must provide real strategic value."""
     
     async def analyze_project(
         self, 
@@ -60,11 +74,13 @@ Your analysis must include:
 2. **Problem & Market Opportunity**: Clear articulation of the problem with derived real numbers
 3. **Target Users**: Specific user personas and their needs
 4. **Core Features**: 5-8 essential features with priority levels and user stories
-5. **MVP Scope**: Ruthlessly prioritized scope for a working prototype
-6. **Tech Stack Recommendation**: Based on the specific idea
-7. **Success Metrics**: With specific targets
-8. **Competitive Landscape**: Naming real competitors
-9. **Risks & Mitigations**: Potential challenges
+5. **Security & Data Privacy**: Detailed strategy for authentication (OAuth2/JWT), authorization (RBAC), and data encryption.
+6. **Scalability & Payments**: Infrastructure growth plan and payment processing integration (e.g., Stripe).
+7. **MVP Scope**: Ruthlessly prioritized scope for a working prototype
+8. **Tech Stack Recommendation**: With specific justification for each choice (Frontend, Backend, DB, DevOps).
+9. **Success Metrics**: With specific targets
+10. **Competitive Landscape**: Naming real competitors
+11. **Risks & Mitigations**: Potential challenges
 
 IMPORTANT: Your entire output MUST be in cleanly formatted Markdown. DO NOT wrap it in JSON. Start directly with `# <Project Name> - Product Strategy`."""
             
@@ -81,6 +97,7 @@ IMPORTANT: Your entire output MUST be in cleanly formatted Markdown. DO NOT wrap
             strategy_output = await llm_router.generate_text(
                 system_prompt=self.system_prompt,
                 user_prompt=user_prompt,
+                api_keys=self.api_keys,
                 temperature=0.7,
                 event_callback=event_callback,
                 target_agent="ProductStrategyAgent",
@@ -120,7 +137,7 @@ IMPORTANT: Your entire output MUST be in cleanly formatted Markdown. DO NOT wrap
                     "timestamp": datetime.utcnow().isoformat()
                 })
             
-            return self._create_fallback_strategy(user_input, f"Error: {str(e)}")
+            raise e
     
     def _create_fallback_strategy(self, user_input: str, raw_output: str = "") -> str:
         """Create a fallback strategy structure in Markdown"""

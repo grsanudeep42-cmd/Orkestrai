@@ -16,15 +16,27 @@ logger = structlog.get_logger()
 class ArchitectureAgent(BaseAgent):
     """Architecture Agent for designing system architecture"""
     
-    def __init__(self):
-        self.system_prompt = """You are an elite Principal Staff Engineer. You design rigorous, highly scalable, and secure software architectures.
-        
-Your output MUST be hyper-specific, practical, and explicitly detailed.
-- NEVER use generic placeholder text like "amazing product" or "we solve the problem".
-- Provide actual technology versions, explicit deployment strategies (e.g., Vercel + AWS RDS), and exact API endpoints.
-- Avoid vague descriptions. If specifying authentication, state exactly how (e.g., JWT with HttpOnly cookies via NextAuth).
-- If you receive feedback from the AuditAgent, you must correct your course immediately."""
-    
+    def __init__(self, api_keys: Optional[Dict[str, str]] = None):
+        super().__init__(api_keys)
+        self.system_prompt = """You are an elite Principal Staff Engineer and System Architect. 
+Your goal is to design a scalable, robust, and modern system architecture based on a product strategy.
+
+CORE RESPONSIBILITIES:
+1) System Overview - High-level architectural pattern (e.g., Microservices, Monolithic, Serverless).
+2) Data Model - Detailed entity-relationship definitions with consistent naming conventions (snake_case for tables/columns).
+3) API Design - RESTful endpoints with consistent naming, comprehensive error handling specifications, and clear request/response formats.
+4) Security Architecture - Detailed JWT/OAuth2 implementation, Role-Based Access Control (RBAC), and input validation strategies.
+5) Component Breakdown - Specific responsibilities for backend, frontend, and external services.
+6) Infrastructure & DevOps - Hosting (e.g., Vercel + AWS), CI/CD, and monitoring recommendations.
+
+CRITICAL INSTRUCTIONS:
+- Use consistent, professional naming conventions across all layers (DB, API, Code).
+- Explicitly define error handling patterns (e.g., global exception handlers, standardized error response bodies).
+- Be hyper-specific about security measures (e.g., CORS policies, secure cookie flags, rate limiting).
+- Ensure the architecture is realistic, modern, and implementable.
+- Use professional Markdown.
+- Provide a clear mapping from strategy requirements to technical components."""
+
     async def design_architecture(
         self, 
         strategy_output: Union[str, Dict[str, Any]],
@@ -64,15 +76,15 @@ USER PREFERENCES:
 {memory_context}
 
 Design a complete system architecture including:
-1. **Full Folder/File Structure**: Provide a complete tree with every file listed.
-2. **Tech Stack**: Derived from the strategy recommendation.
-3. **Database Schema**: All tables, fields, and relationships.
-4. **API Endpoints**: All routes, methods, request/response shapes.
-5. **Frontend Architecture**: Page structure and component hierarchy.
-6. **Environment Variables**: List all required variables.
-7. **Docker Setup**: Describe the Docker and deployment setup.
+1. **Full Folder/File Structure**: Provide a complete tree with every file listed, following professional layout standards.
+2. **Tech Stack**: Derived from the strategy recommendation, with specific versions if possible.
+3. **Database Schema**: All tables (snake_case), fields, relationships, and indexing strategy.
+4. **RESTful API Design**: All routes, methods, and standardized request/response shapes. Include a dedicated section on Error Handling & Validation.
+5. **Security & Auth**: Detailed JWT/OAuth2 flow, RBAC, and data sanitization strategies.
+6. **Frontend Architecture**: Component hierarchy, state management (e.g., Redux, Context API), and routing.
+7. **Environment & DevOps**: List all required variables and describe the Docker + CI/CD setup.
 
-IMPORTANT: Your entire output MUST be in cleanly formatted Markdown. DO NOT wrap it in JSON. Use code blocks for file trees and schemas."""
+IMPORTANT: Your entire output MUST be in cleanly formatted Markdown. DO NOT wrap it in JSON. Use code blocks for file trees and schemas. Ensure consistency in naming conventions throughout."""
             
             if event_callback:
                 await event_callback({
@@ -84,13 +96,15 @@ IMPORTANT: Your entire output MUST be in cleanly formatted Markdown. DO NOT wrap
             
             logger.info("Calling LLM Provider Router for ArchitectureAgent")
             
-            architecture_output = await llm_router.generate_text(
+            architecture_result = await llm_router.generate_text(
                 system_prompt=self.system_prompt,
                 user_prompt=user_prompt,
-                temperature=0.5,
+                api_keys=self.api_keys,
+                temperature=0.3,
                 event_callback=event_callback,
                 target_agent="ArchitectureAgent"
             )
+
             
             end_time = datetime.utcnow()
             duration_ms = int((end_time - start_time).total_seconds() * 1000)
@@ -125,7 +139,7 @@ IMPORTANT: Your entire output MUST be in cleanly formatted Markdown. DO NOT wrap
                     "timestamp": datetime.utcnow().isoformat()
                 })
             
-            return self._create_fallback_architecture(strategy_output, f"Error: {str(e)}")
+            raise e
     
     def _create_fallback_architecture(self, strategy_output: Union[str, Dict[str, Any]], raw_output: str = "") -> str:
         """Create a fallback architecture in Markdown"""

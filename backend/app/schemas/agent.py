@@ -19,7 +19,7 @@ class AgentLogResponse(BaseModel):
     output_preview: Optional[str] = None
     full_output: Optional[Dict[str, Any]] = None
     error_details: Optional[str] = None
-    metadata: Optional[Dict[str, Any]] = None
+    agent_metadata: Optional[Dict[str, Any]] = None
     
     class Config:
         from_attributes = True
