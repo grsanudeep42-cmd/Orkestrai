@@ -26,13 +26,23 @@ class UserResponse(UserBase):
     id: str
     created_at: datetime
     has_github_token: bool = False
+    has_openai_key: bool = False
+    has_gemini_key: bool = False
+    has_groq_key: bool = False
+    has_openrouter_key: bool = False
+    has_bob_key: bool = False
 
     class Config:
         from_attributes = True
 
 
-class GithubTokenUpdate(BaseModel):
-    github_token: str
+class UserKeysUpdate(BaseModel):
+    github_token: Optional[str] = None
+    openai_key: Optional[str] = None
+    gemini_key: Optional[str] = None
+    groq_key: Optional[str] = None
+    openrouter_key: Optional[str] = None
+    bob_key: Optional[str] = None
 
 
 class Token(BaseModel):

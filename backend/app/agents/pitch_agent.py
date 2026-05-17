@@ -15,7 +15,8 @@ logger = structlog.get_logger()
 class PitchAgent(BaseAgent):
     """Pitch Agent for generating HTML presentations"""
     
-    def __init__(self):
+    def __init__(self, api_keys: Optional[Dict[str, str]] = None):
+        super().__init__(api_keys)
         self.system_prompt = """You are an elite Startup Founder, Product Designer, and Storyteller.
 Your goal is to generate a stunning, professional, and self-contained HTML presentation deck.
 
@@ -48,7 +49,8 @@ Start your response with <!DOCTYPE html> and end with </html>."""
         user_input: str,
         preferences: Optional[Dict[str, Any]] = None,
         memory: Optional[Dict[str, Any]] = None,
-        event_callback: Optional[Callable] = None
+        event_callback: Optional[Callable] = None,
+        project_id: Optional[str] = None
     ) -> Dict[str, Any]:
         """
         Generate pitch materials as an HTML content string
@@ -93,6 +95,7 @@ Generate the complete, self-contained HTML presentation now."""
             raw_response = await llm_router.generate_text(
                 system_prompt=self.system_prompt,
                 user_prompt=user_prompt,
+                api_keys=self.api_keys,
                 target_agent="PitchAgent",
                 temperature=0.4,
                 max_tokens=8000,
@@ -143,19 +146,7 @@ Generate the complete, self-contained HTML presentation now."""
                     "timestamp": datetime.utcnow().isoformat()
                 })
             
-            fallback = self._create_fallback_pitch(strategy_output, f"Error: {str(e)}")
-            base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-            static_dir = os.path.join(base_dir, "static", "generated")
-            os.makedirs(static_dir, exist_ok=True)
-            html_filename = f"{project_id}_pitch_fallback.html"
-            html_path = os.path.join(static_dir, html_filename)
-            with open(html_path, "w") as f:
-                f.write(fallback.get("html_content", "<html></html>"))
-                
-            return {
-                "presentation_url": f"/static/generated/{html_filename}",
-                "message": "Fallback generated."
-            }
+            raise e
     
     def _create_fallback_pitch(self, strategy_output: Dict[str, Any] | str, raw_output: str = "") -> Dict[str, Any]:
         """Create fallback pitch"""

@@ -11,6 +11,9 @@ T = TypeVar("T", bound=BaseModel)
 class BaseAgent:
     """Base Agent class providing common utility methods"""
     
+    def __init__(self, api_keys: Optional[Dict[str, str]] = None):
+        self.api_keys = api_keys or {}
+
     def sanitize_output_dict(self, data: Any) -> Any:
         """Recursively removes control characters from string values"""
         if isinstance(data, str):
@@ -134,6 +137,7 @@ class BaseAgent:
                 system_prompt=system_prompt,
                 user_prompt=user_prompt,
                 response_model=SafeModel,
+                api_keys=self.api_keys,
                 temperature=temperature,
                 event_callback=event_callback,
                 target_agent=agent_name

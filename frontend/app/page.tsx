@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowRight, Sparkles, Zap, Code, GitBranch, Terminal, Plus, LayoutDashboard, History, ExternalLink, Loader2, LogOut, ShieldCheck } from "lucide-react";
+import { ArrowRight, Sparkles, Zap, Code, GitBranch, Terminal, Plus, LayoutDashboard, History, ExternalLink, Loader2, LogOut, Settings } from "lucide-react";
 import { useEffect, useState } from "react";
 import { apiClient } from "@/lib/api/client";
 import { Project } from "@/types";
@@ -71,7 +71,7 @@ export default function Home() {
             </div>
             <div className="flex items-center space-x-4">
               <Link href="/settings" className="p-2 text-muted-foreground hover:text-primary transition-colors" title="Settings">
-                <ShieldCheck className="w-5 h-5" />
+                <Settings className="w-5 h-5" />
               </Link>
               <Link href="/create" className="flex items-center space-x-2 bg-primary text-background px-4 py-2 rounded-lg font-bold hover:bg-primary-hover transition-all text-sm shadow-[0_0_15px_rgba(0,212,255,0.3)]">
                 <Plus className="w-4 h-4" />

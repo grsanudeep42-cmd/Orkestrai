@@ -84,7 +84,7 @@ async def start_orchestration(
     current_user: User = Depends(get_current_user)
 ):
     """
-    Start orchestration for a project
+    Start or resume orchestration for a project
     """
     result = await db.execute(
         select(Project).where(Project.id == project_id, Project.user_id == current_user.id)
@@ -94,14 +94,14 @@ async def start_orchestration(
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
     
-    if project.status == "orchestrating":
-        raise HTTPException(status_code=400, detail="Orchestration already in progress")
-
     if project.status == "completed":
         raise HTTPException(status_code=400, detail="Orchestration already completed. Create a new project to run again.")
 
-    if project.status not in ["pending", "failed"]:
-        raise HTTPException(status_code=400, detail=f"Cannot start orchestration: project status is {project.status}")
+    # We allow "orchestrating" to be re-started in case the background task died
+    if project.status == "orchestrating":
+        # If updated in last 30 seconds, it might be truly active
+        if (datetime.utcnow() - project.updated_at).total_seconds() < 30:
+            return {"message": "Orchestration is already active", "project_id": project_id}
     
     project.status = "orchestrating"
     project.updated_at = datetime.utcnow()
@@ -109,7 +109,7 @@ async def start_orchestration(
     
     background_tasks.add_task(run_orchestration, project_id, current_user.id)
     
-    return {"message": "Orchestration started", "project_id": project_id}
+    return {"message": "Orchestration started/resumed", "project_id": project_id}
 
 
 # Formatting functions...
@@ -201,12 +201,13 @@ async def execute_agent_with_review(
 
 async def run_orchestration(project_id: str, user_id: str):
     """
-    Run the orchestration process with autonomous review loops
+    Run the orchestration process with autonomous review loops.
+    Supports resuming from existing artifacts.
     """
     from app.db.session import AsyncSessionLocal
     from app.api.v1.endpoints.websocket import manager
     
-    logger.info("Starting orchestration", project_id=project_id, user_id=user_id)
+    logger.info("Starting/Resuming orchestration", project_id=project_id, user_id=user_id)
     
     async with AsyncSessionLocal() as db:
         try:
@@ -221,155 +222,214 @@ async def run_orchestration(project_id: str, user_id: str):
                 logger.error("Project or User not found", project_id=project_id, user_id=user_id)
                 return
             
+            # Fetch existing artifacts to support resuming
+            artifacts_result = await db.execute(
+                select(GeneratedArtifact).where(GeneratedArtifact.project_id == project_id)
+            )
+            existing_artifacts = {a.artifact_type: a.content for a in artifacts_result.scalars().all()}
+            
             await manager.broadcast_to_project(
                 project_id,
                 {
                     "type": "connection_established",
                     "project_id": project_id,
-                    "message": "Orchestration started",
+                    "message": "Orchestration resumed" if existing_artifacts else "Orchestration started",
                     "timestamp": datetime.utcnow().isoformat()
                 }
             )
             
             async def on_agent_event(data: dict):
+                # Update project updated_at to indicate activity
+                try:
+                    # We need to refresh the project object because it might be detached or updated elsewhere
+                    # For simplicity in this background task, we'll just try to update it
+                    project.updated_at = datetime.utcnow()
+                    await db.commit()
+                except Exception as update_err:
+                    logger.warning(f"Failed to update project heartbeat: {update_err}")
+                
                 await manager.broadcast_to_project(project_id, {
                     "project_id": project_id,
                     "timestamp": datetime.utcnow().isoformat(),
                     **data
                 })
             
-            audit_agent = AuditAgent()
+            # Prepare API keys from user profile
+            api_keys = {
+                "openai": current_user.openai_key,
+                "gemini": current_user.gemini_key,
+                "groq": current_user.groq_key,
+                "openrouter": current_user.openrouter_key,
+                "bob": current_user.bob_key
+            }
+            
+            audit_agent = AuditAgent(api_keys=api_keys)
             context = {}
             
+            # Populate context from existing artifacts
+            for atype, content in existing_artifacts.items():
+                if atype == "strategy":
+                    context["strategy"] = content.get("markdown") if isinstance(content, dict) else content
+                elif atype == "architecture":
+                    context["architecture"] = content.get("markdown") if isinstance(content, dict) else content
+                elif atype == "implementation_plan":
+                    context["implementation"] = content
+                elif atype == "github_setup":
+                    context["github"] = content
+                elif atype == "pitch_deck":
+                    context["pitch"] = content
+
             # ===== AGENT 1: Strategy Agent =====
-            strategy_agent = StrategyAgent()
-            async def run_strategy(memory=None):
-                return await strategy_agent.analyze_project(
-                    user_input=project.user_input,
-                    preferences=project.preferences,
-                    memory=memory,
-                    event_callback=on_agent_event
+            strategy_result = context.get("strategy")
+            if not strategy_result:
+                strategy_agent = StrategyAgent(api_keys=api_keys)
+                async def run_strategy(memory=None):
+                    return await strategy_agent.analyze_project(
+                        user_input=project.user_input,
+                        preferences=project.preferences,
+                        memory=memory,
+                        event_callback=on_agent_event
+                    )
+                    
+                strategy_result = await execute_agent_with_review(
+                    "ProductStrategyAgent", run_strategy, audit_agent, project.user_input, context, on_agent_event, db, project_id
                 )
+                context["strategy"] = strategy_result
                 
-            strategy_result = await execute_agent_with_review(
-                "ProductStrategyAgent", run_strategy, audit_agent, project.user_input, context, on_agent_event, db, project_id
-            )
-            context["strategy"] = strategy_result
-            await on_agent_event({
-                "type": "memory_updated",
-                "message": "Shared Execution Memory updated with Strategy context",
-                "keys": list(context.keys())
-            })
-            
-            strategy_log = AgentLog(project_id=project_id, agent_name="ProductStrategyAgent", action="generate_strategy", status="completed", full_output={"content": strategy_result} if isinstance(strategy_result, str) else strategy_result)
-            db.add(strategy_log)
-            db.add(GeneratedArtifact(project_id=project_id, generated_by="ProductStrategyAgent", artifact_type="strategy", content={"markdown": strategy_result} if isinstance(strategy_result, str) else strategy_result))
-            await db.commit()
-            
+                strategy_log = AgentLog(project_id=project_id, agent_name="ProductStrategyAgent", action="generate_strategy", status="completed", full_output={"content": strategy_result} if isinstance(strategy_result, str) else strategy_result)
+                db.add(strategy_log)
+                db.add(GeneratedArtifact(project_id=project_id, generated_by="ProductStrategyAgent", artifact_type="strategy", content={"markdown": strategy_result} if isinstance(strategy_result, str) else strategy_result))
+                await db.commit()
+            else:
+                await on_agent_event({
+                    "type": "agent_skip",
+                    "agent": "ProductStrategyAgent",
+                    "message": "Strategy already exists, resuming from next step."
+                })
+
             # ===== AGENT 2: Architecture Agent =====
-            architecture_agent = ArchitectureAgent()
-            async def run_architecture(memory=None):
-                return await architecture_agent.design_architecture(
-                    strategy_output=strategy_result,
-                    user_input=project.user_input,
-                    preferences=project.preferences,
-                    memory=memory,
-                    event_callback=on_agent_event
+            architecture_result = context.get("architecture")
+            if not architecture_result:
+                architecture_agent = ArchitectureAgent(api_keys=api_keys)
+                async def run_architecture(memory=None):
+                    return await architecture_agent.design_architecture(
+                        strategy_output=strategy_result,
+                        user_input=project.user_input,
+                        preferences=project.preferences,
+                        memory=memory,
+                        event_callback=on_agent_event
+                    )
+                    
+                architecture_result = await execute_agent_with_review(
+                    "ArchitectureAgent", run_architecture, audit_agent, project.user_input, context, on_agent_event, db, project_id
                 )
+                context["architecture"] = architecture_result
                 
-            architecture_result = await execute_agent_with_review(
-                "ArchitectureAgent", run_architecture, audit_agent, project.user_input, context, on_agent_event, db, project_id
-            )
-            context["architecture"] = architecture_result
-            await on_agent_event({
-                "type": "memory_updated",
-                "message": "Shared Execution Memory updated with Architecture context",
-                "keys": list(context.keys())
-            })
-            
-            arch_log = AgentLog(project_id=project_id, agent_name="ArchitectureAgent", action="design_architecture", status="completed", full_output={"content": architecture_result} if isinstance(architecture_result, str) else architecture_result)
-            db.add(arch_log)
-            db.add(GeneratedArtifact(project_id=project_id, generated_by="ArchitectureAgent", artifact_type="architecture", content={"markdown": architecture_result} if isinstance(architecture_result, str) else architecture_result))
-            await db.commit()
-            
+                arch_log = AgentLog(project_id=project_id, agent_name="ArchitectureAgent", action="design_architecture", status="completed", full_output={"content": architecture_result} if isinstance(architecture_result, str) else architecture_result)
+                db.add(arch_log)
+                db.add(GeneratedArtifact(project_id=project_id, generated_by="ArchitectureAgent", artifact_type="architecture", content={"markdown": architecture_result} if isinstance(architecture_result, str) else architecture_result))
+                await db.commit()
+            else:
+                await on_agent_event({
+                    "type": "agent_skip",
+                    "agent": "ArchitectureAgent",
+                    "message": "Architecture already exists, resuming from next step."
+                })
+
             # ===== AGENT 3: Builder Agent =====
-            builder_agent = BuilderAgent()
-            async def run_builder(memory=None):
-                return await builder_agent.generate_implementation_plan(
-                    strategy_output=strategy_result,
-                    architecture_output=architecture_result,
-                    user_input=project.user_input,
-                    preferences=project.preferences,
-                    memory=memory,
-                    event_callback=on_agent_event
+            implementation_result = context.get("implementation")
+            if not implementation_result:
+                builder_agent = BuilderAgent(api_keys=api_keys)
+                async def run_builder(memory=None):
+                    return await builder_agent.generate_implementation_plan(
+                        strategy_output=strategy_result,
+                        architecture_output=architecture_result,
+                        user_input=project.user_input,
+                        preferences=project.preferences,
+                        memory=memory,
+                        event_callback=on_agent_event,
+                        project_id=project_id
+                    )
+                    
+                implementation_result = await execute_agent_with_review(
+                    "BuilderAgent", run_builder, audit_agent, project.user_input, context, on_agent_event, db, project_id
                 )
+                context["implementation"] = implementation_result
                 
-            implementation_result = await execute_agent_with_review(
-                "BuilderAgent", run_builder, audit_agent, project.user_input, context, on_agent_event, db, project_id
-            )
-            context["implementation"] = implementation_result
-            await on_agent_event({
-                "type": "memory_updated",
-                "message": "Shared Execution Memory updated with Implementation context",
-                "keys": list(context.keys())
-            })
-            
-            builder_log = AgentLog(project_id=project_id, agent_name="BuilderAgent", action="generate_implementation_plan", status="completed", full_output=implementation_result)
-            db.add(builder_log)
-            db.add(GeneratedArtifact(project_id=project_id, generated_by="BuilderAgent", artifact_type="implementation_plan", content=implementation_result))
-            await db.commit()
-            
+                builder_log = AgentLog(project_id=project_id, agent_name="BuilderAgent", action="generate_implementation_plan", status="completed", full_output=implementation_result)
+                db.add(builder_log)
+                db.add(GeneratedArtifact(project_id=project_id, generated_by="BuilderAgent", artifact_type="implementation_plan", content=implementation_result))
+                await db.commit()
+            else:
+                await on_agent_event({
+                    "type": "agent_skip",
+                    "agent": "BuilderAgent",
+                    "message": "Implementation plan already exists, resuming from next step."
+                })
+
             # ===== AGENT 4: GitHub Agent =====
-            github_agent = GitHubAgent()
-            async def run_github(memory=None):
-                return await github_agent.generate_github_recommendations(
-                    strategy_output=strategy_result,
-                    architecture_output=architecture_result,
-                    implementation_output=implementation_result,
-                    user_input=project.user_input,
-                    preferences=project.preferences,
-                    memory=memory,
-                    event_callback=on_agent_event,
-                    current_user=current_user
+            github_result = context.get("github")
+            if not github_result:
+                github_agent = GitHubAgent(api_keys=api_keys)
+                async def run_github(memory=None):
+                    return await github_agent.generate_github_recommendations(
+                        strategy_output=strategy_result,
+                        architecture_output=architecture_result,
+                        implementation_output=implementation_result,
+                        user_input=project.user_input,
+                        preferences=project.preferences,
+                        memory=memory,
+                        event_callback=on_agent_event,
+                        current_user=current_user
+                    )
+                    
+                github_result = await execute_agent_with_review(
+                    "GitHubAgent", run_github, audit_agent, project.user_input, context, on_agent_event, db, project_id
                 )
+                context["github"] = github_result
                 
-            github_result = await execute_agent_with_review(
-                "GitHubAgent", run_github, audit_agent, project.user_input, context, on_agent_event, db, project_id
-            )
-            context["github"] = github_result
-            await on_agent_event({
-                "type": "memory_updated",
-                "message": "Shared Execution Memory updated with GitHub context",
-                "keys": list(context.keys())
-            })
-            
-            github_log = AgentLog(project_id=project_id, agent_name="GitHubAgent", action="generate_github_recommendations", status="completed", full_output=github_result)
-            db.add(github_log)
-            db.add(GeneratedArtifact(project_id=project_id, generated_by="GitHubAgent", artifact_type="github_setup", content=github_result))
-            await db.commit()
-            
+                github_log = AgentLog(project_id=project_id, agent_name="GitHubAgent", action="generate_github_recommendations", status="completed", full_output=github_result)
+                db.add(github_log)
+                db.add(GeneratedArtifact(project_id=project_id, generated_by="GitHubAgent", artifact_type="github_setup", content=github_result))
+                await db.commit()
+            else:
+                await on_agent_event({
+                    "type": "agent_skip",
+                    "agent": "GitHubAgent",
+                    "message": "GitHub setup already exists, resuming from next step."
+                })
+
             # ===== AGENT 5: Pitch Agent =====
-            pitch_agent = PitchAgent()
-            async def run_pitch(memory=None):
-                return await pitch_agent.generate_pitch_materials(
-                    strategy_output=strategy_result,
-                    architecture_output=architecture_result,
-                    implementation_output=implementation_result,
-                    github_output=github_result,
-                    user_input=project.user_input,
-                    preferences=project.preferences,
-                    memory=memory,
-                    event_callback=on_agent_event
+            pitch_result = context.get("pitch")
+            if not pitch_result:
+                pitch_agent = PitchAgent(api_keys=api_keys)
+                async def run_pitch(memory=None):
+                    return await pitch_agent.generate_pitch_materials(
+                        strategy_output=strategy_result,
+                        architecture_output=architecture_result,
+                        implementation_output=implementation_result,
+                        github_output=github_result,
+                        user_input=project.user_input,
+                        preferences=project.preferences,
+                        memory=memory,
+                        event_callback=on_agent_event,
+                        project_id=project_id
+                    )
+                    
+                pitch_result = await execute_agent_with_review(
+                    "PitchAgent", run_pitch, audit_agent, project.user_input, context, on_agent_event, db, project_id
                 )
                 
-            pitch_result = await execute_agent_with_review(
-                "PitchAgent", run_pitch, audit_agent, project.user_input, context, on_agent_event, db, project_id
-            )
-            
-            pitch_log = AgentLog(project_id=project_id, agent_name="PitchAgent", action="generate_pitch_materials", status="completed", full_output=pitch_result)
-            db.add(pitch_log)
-            db.add(GeneratedArtifact(project_id=project_id, generated_by="PitchAgent", artifact_type="pitch_deck", content=pitch_result))
-            await db.commit()
+                pitch_log = AgentLog(project_id=project_id, agent_name="PitchAgent", action="generate_pitch_materials", status="completed", full_output=pitch_result)
+                db.add(pitch_log)
+                db.add(GeneratedArtifact(project_id=project_id, generated_by="PitchAgent", artifact_type="pitch_deck", content=pitch_result))
+                await db.commit()
+            else:
+                await on_agent_event({
+                    "type": "agent_skip",
+                    "agent": "PitchAgent",
+                    "message": "Pitch deck already exists."
+                })
             
             # Update project status
             project.status = "completed"

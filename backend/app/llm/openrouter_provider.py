@@ -4,9 +4,9 @@ OpenRouter AI Provider
 import json
 import httpx
 import structlog
-from typing import Type, TypeVar, Optional, Any
+from typing import Type, TypeVar, Optional, Any, Tuple
 from pydantic import BaseModel, ValidationError
-from app.llm.base import BaseProvider
+from app.llm.base import BaseProvider, UsageStats
 
 logger = structlog.get_logger()
 T = TypeVar("T", bound=BaseModel)
@@ -24,7 +24,7 @@ class OpenRouterProvider(BaseProvider):
     def name(self) -> str:
         return self._name
 
-    async def _make_request(self, messages: list, temperature: float, max_tokens: int, json_mode: bool = False) -> str:
+    async def _make_request(self, messages: list, temperature: float, max_tokens: int, json_mode: bool = False) -> Tuple[str, UsageStats]:
         headers = {
             "Authorization": f"Bearer {self.api_key}",
             "HTTP-Referer": "https://orkestrai.local", # Replace with actual domain
@@ -53,7 +53,16 @@ class OpenRouterProvider(BaseProvider):
             data = response.json()
             
             if "choices" in data and len(data["choices"]) > 0:
-                return data["choices"][0]["message"]["content"]
+                content = data["choices"][0]["message"]["content"]
+                usage = data.get("usage", {})
+                stats = UsageStats(
+                    prompt_tokens=usage.get("prompt_tokens", 0),
+                    completion_tokens=usage.get("completion_tokens", 0),
+                    total_tokens=usage.get("total_tokens", 0),
+                    provider=self.name,
+                    model=self.model
+                )
+                return content, stats
             else:
                 raise ValueError(f"Unexpected response format from OpenRouter: {data}")
 
@@ -65,7 +74,7 @@ class OpenRouterProvider(BaseProvider):
         temperature: float = 0.7,
         max_tokens: int = 2000,
         max_retries: int = 2
-    ) -> T:
+    ) -> Tuple[T, UsageStats]:
         """Generate structured output validated by Pydantic"""
         schema = response_model.model_json_schema()
         schema_instruction = (
@@ -83,7 +92,7 @@ class OpenRouterProvider(BaseProvider):
                     {"role": "user", "content": user_prompt}
                 ]
                 
-                content = await self._make_request(
+                content, stats = await self._make_request(
                     messages=messages, 
                     temperature=temperature, 
                     max_tokens=max_tokens,
@@ -106,7 +115,7 @@ class OpenRouterProvider(BaseProvider):
                 # Validate with Pydantic (allowing unescaped control chars like \n in strings)
                 parsed_data = json.loads(content, strict=False)
                 result = response_model.model_validate(parsed_data)
-                return result
+                return result, stats
                 
             except (ValidationError, ValueError) as e:
                 logger.warning(f"Validation error on attempt {attempt+1}/{max_retries+1}", error=str(e), provider=self.name)
@@ -124,7 +133,7 @@ class OpenRouterProvider(BaseProvider):
         user_prompt: str,
         temperature: float = 0.7,
         max_tokens: int = 2000,
-    ) -> str:
+    ) -> Tuple[str, UsageStats]:
         """Generate raw text output"""
         messages = [
             {"role": "system", "content": system_prompt},

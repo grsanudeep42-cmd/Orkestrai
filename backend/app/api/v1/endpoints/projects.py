@@ -1,7 +1,7 @@
 """
 Project API endpoints
 """
-from fastapi import APIRouter, Depends, HTTPException, status, Response
+from fastapi import APIRouter, Depends, HTTPException, status, Response, BackgroundTasks
 from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
@@ -308,9 +308,113 @@ async def get_project_logs(
     return logs
 
 
+async def run_github_retry(project_id: str, user_id: str):
+    """
+    Background task to retry GitHub integration
+    """
+    from app.db.session import AsyncSessionLocal
+    from app.api.v1.endpoints.websocket import manager
+    
+    async with AsyncSessionLocal() as db:
+        try:
+            # 1. Fetch project and user
+            proj_result = await db.execute(select(Project).where(Project.id == project_id))
+            project = proj_result.scalar_one_or_none()
+            
+            user_result = await db.execute(select(User).where(User.id == user_id))
+            current_user = user_result.scalar_one_or_none()
+            
+            if not project or not current_user:
+                logger.error("Project or User not found for GitHub retry", project_id=project_id, user_id=user_id)
+                return
+
+            # 2. Get necessary artifacts for GitHubAgent
+            art_result = await db.execute(
+                select(GeneratedArtifact).where(GeneratedArtifact.project_id == project_id)
+            )
+            artifacts = art_result.scalars().all()
+            
+            strategy = next((a.content for a in artifacts if a.artifact_type == "strategy"), None)
+            architecture = next((a.content for a in artifacts if a.artifact_type == "architecture"), None)
+            implementation = next((a.content for a in artifacts if a.artifact_type == "implementation_plan"), None)
+            
+            if not implementation:
+                logger.error("Implementation plan not found for GitHub retry", project_id=project_id)
+                return
+
+            # Update artifact message to show progress
+            existing_github_art = next((a for a in artifacts if a.artifact_type == "github_setup"), None)
+            if existing_github_art:
+                if isinstance(existing_github_art.content, dict):
+                    existing_github_art.content["message"] = "GitHub integration is being retried... please check the Orchestration History console below for live logs."
+                else:
+                    existing_github_art.content = {"message": "GitHub integration is being retried... please check the Orchestration History console below for live logs.", "repository_url": "setup-pending"}
+                
+                from sqlalchemy.orm.attributes import flag_modified
+                flag_modified(existing_github_art, "content")
+                await db.commit()
+
+            # 3. Initialize GitHub Agent
+            github_agent = GitHubAgent()
+            
+            # Define a simple log callback
+            async def log_event(event):
+                logger.info("GitHub Retry Event", project_id=project_id, event_data=event)
+                
+                # Broadcast via WebSocket for UI updates
+                await manager.broadcast_to_project(project_id, {
+                    "project_id": project_id,
+                    "timestamp": datetime.utcnow().isoformat(),
+                    **event
+                })
+
+                # Optionally save to AgentLog table
+                if event["type"] == "agent_output":
+                    log = AgentLog(
+                        project_id=project_id,
+                        agent_name="GitHubAgent",
+                        action="github_retry",
+                        status="completed",
+                        started_at=datetime.utcnow(),
+                        completed_at=datetime.utcnow(),
+                        full_output=event["data"]
+                    )
+                    db.add(log)
+
+            # 4. Run Agent
+            github_result = await github_agent.generate_github_recommendations(
+                strategy_output=strategy or "Strategy missing",
+                architecture_output=architecture or "Architecture missing",
+                implementation_output=implementation,
+                user_input=project.user_input,
+                current_user=current_user,
+                event_callback=log_event
+            )
+            
+            # 5. Update or create the github_setup artifact
+            # Re-fetch or use existing
+            if existing_github_art:
+                existing_github_art.content = github_result
+                existing_github_art.generated_at = datetime.utcnow()
+                flag_modified(existing_github_art, "content")
+            else:
+                db.add(GeneratedArtifact(
+                    project_id=project_id,
+                    generated_by="GitHubAgent",
+                    artifact_type="github_setup",
+                    content=github_result
+                ))
+                
+            await db.commit()
+            logger.info("GitHub retry background task complete", project_id=project_id)
+        except Exception as e:
+            logger.error("GitHub background retry failed", error=str(e), project_id=project_id)
+
+
 @router.post("/{project_id}/github-retry")
 async def retry_github_integration(
     project_id: str,
+    background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -325,66 +429,15 @@ async def retry_github_integration(
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
 
-    # 2. Get necessary artifacts for GitHubAgent
+    # 2. Check for implementation plan
     art_result = await db.execute(
-        select(GeneratedArtifact).where(GeneratedArtifact.project_id == project_id)
+        select(GeneratedArtifact).where(GeneratedArtifact.project_id == project_id, GeneratedArtifact.artifact_type == "implementation_plan")
     )
-    artifacts = art_result.scalars().all()
-    
-    strategy = next((a.content for a in artifacts if a.artifact_type == "strategy"), None)
-    architecture = next((a.content for a in artifacts if a.artifact_type == "architecture"), None)
-    implementation = next((a.content for a in artifacts if a.artifact_type == "implementation_plan"), None)
-    
-    if not implementation:
+    if not art_result.scalar_one_or_none():
         raise HTTPException(status_code=400, detail="Cannot retry GitHub: Project implementation not found")
 
-    # 3. Initialize GitHub Agent
-    github_agent = GitHubAgent()
+    background_tasks.add_task(run_github_retry, project_id, current_user.id)
     
-    # Define a simple log callback
-    async def log_event(event):
-        logger.info("GitHub Retry Event", project_id=project_id, event=event)
-        # Optionally save to AgentLog table
-        if event["type"] == "agent_output":
-            log = AgentLog(
-                project_id=project_id,
-                agent_name="GitHubAgent",
-                action="github_retry",
-                status="completed",
-                started_at=datetime.utcnow(),
-                completed_at=datetime.utcnow(),
-                full_output=event["data"]
-            )
-            db.add(log)
-
-    # 4. Run Agent
-    try:
-        github_result = await github_agent.generate_github_recommendations(
-            strategy_output=strategy or "Strategy missing",
-            architecture_output=architecture or "Architecture missing",
-            implementation_output=implementation,
-            user_input=project.user_input,
-            current_user=current_user,
-            event_callback=log_event
-        )
-        
-        # 5. Update or create the github_setup artifact
-        existing_github_art = next((a for a in artifacts if a.artifact_type == "github_setup"), None)
-        if existing_github_art:
-            existing_github_art.content = github_result
-            existing_github_art.generated_at = datetime.utcnow()
-        else:
-            db.add(GeneratedArtifact(
-                project_id=project_id,
-                generated_by="GitHubAgent",
-                artifact_type="github_setup",
-                content=github_result
-            ))
-            
-        await db.commit()
-        return github_result
-    except Exception as e:
-        logger.error("GitHub retry failed", error=str(e))
-        raise HTTPException(status_code=500, detail=f"GitHub retry failed: {str(e)}")
+    return {"message": "GitHub retry started"}
 
 # Made with Bob

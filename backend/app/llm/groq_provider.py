@@ -3,11 +3,11 @@ Groq AI Provider
 """
 import json
 import structlog
-from typing import Type, TypeVar, Optional, Any
+from typing import Type, TypeVar, Optional, Any, Tuple
 from pydantic import BaseModel, ValidationError
 from groq import AsyncGroq
 from app.config import settings
-from app.llm.base import BaseProvider
+from app.llm.base import BaseProvider, UsageStats
 
 logger = structlog.get_logger()
 T = TypeVar("T", bound=BaseModel)
@@ -32,7 +32,7 @@ class GroqProvider(BaseProvider):
         temperature: float = 0.7,
         max_tokens: int = 2000,
         max_retries: int = 2
-    ) -> T:
+    ) -> Tuple[T, UsageStats]:
         """Generate structured output validated by Pydantic"""
         schema = response_model.model_json_schema()
         schema_instruction = (
@@ -58,13 +58,23 @@ class GroqProvider(BaseProvider):
                 )
                 
                 content = chat_completion.choices[0].message.content
+                usage = chat_completion.usage
+                
+                stats = UsageStats(
+                    prompt_tokens=usage.prompt_tokens,
+                    completion_tokens=usage.completion_tokens,
+                    total_tokens=usage.total_tokens,
+                    provider=self.name,
+                    model=self.model
+                )
+
                 if not content:
                     raise ValueError("Empty response received from Groq")
                     
                 # Validate with Pydantic (allowing unescaped control chars like \n in strings)
                 parsed_data = json.loads(content, strict=False)
                 result = response_model.model_validate(parsed_data)
-                return result
+                return result, stats
                 
             except (ValidationError, ValueError) as e:
                 logger.warning(f"Validation error on attempt {attempt+1}/{max_retries+1}", error=str(e), provider=self.name)
@@ -83,7 +93,7 @@ class GroqProvider(BaseProvider):
         user_prompt: str,
         temperature: float = 0.7,
         max_tokens: int = 2000,
-    ) -> str:
+    ) -> Tuple[str, UsageStats]:
         """Generate raw text output"""
         chat_completion = await self.client.chat.completions.create(
             messages=[
@@ -95,4 +105,12 @@ class GroqProvider(BaseProvider):
             max_tokens=max_tokens,
             stream=False
         )
-        return chat_completion.choices[0].message.content or ""
+        usage = chat_completion.usage
+        stats = UsageStats(
+            prompt_tokens=usage.prompt_tokens,
+            completion_tokens=usage.completion_tokens,
+            total_tokens=usage.total_tokens,
+            provider=self.name,
+            model=self.model
+        )
+        return chat_completion.choices[0].message.content or "", stats

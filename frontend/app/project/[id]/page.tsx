@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Loader2, CheckCircle2, Circle, AlertCircle } from "lucide-react";
+import { ArrowLeft, Loader2, CheckCircle2, Circle, AlertCircle, RefreshCw, Settings } from "lucide-react";
 import { apiClient } from "@/lib/api/client";
 import { useWebSocket } from "@/hooks/use-websocket";
 import { Project, OrchestrationStatus } from "@/types";
@@ -22,10 +22,24 @@ export default function OrchestrationView() {
   const [project, setProject] = useState<Project | null>(null);
   const [status, setStatus] = useState<OrchestrationStatus | null>(null);
   const [historicalEvents, setHistoricalEvents] = useState<any[]>([]);
+  const [usageStats, setUsageStats] = useState<{ [agent: string]: any }>({});
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   
   const { isConnected, events: liveEvents, lastEvent } = useWebSocket(projectId);
+  const [isResuming, setIsResuming] = useState(false);
+
+  const handleResume = async () => {
+    setIsResuming(true);
+    setError(null);
+    try {
+      await apiClient.request(`/api/v1/orchestration/${projectId}/start`, { method: "POST" });
+    } catch (err: any) {
+      setError(err.message || "Failed to resume orchestration");
+    } finally {
+      setIsResuming(false);
+    }
+  };
 
   // Combine live and historical events, removing duplicates
   const events = [...historicalEvents, ...liveEvents].filter((event, index, self) => 
@@ -38,6 +52,7 @@ export default function OrchestrationView() {
   const retriesCount = events.filter(e => e.type === "agent_retry").length;
   const totalDurationMs = events.reduce((sum, e) => sum + (e.duration_ms || 0), 0);
   const activeProvider = events.slice().reverse().find(e => e.type === "provider_selected" || e.type === "provider_fallback")?.provider || null;
+  const totalTokens = Object.values(usageStats).reduce((sum, u) => sum + (u.total_tokens || 0), 0);
 
   // Fetch project and status
   useEffect(() => {
@@ -80,6 +95,12 @@ export default function OrchestrationView() {
 
   // Update status based on WebSocket events
   useEffect(() => {
+    if (lastEvent?.type === "usage_stats") {
+      setUsageStats(prev => ({
+        ...prev,
+        [lastEvent.agent || "System"]: lastEvent.usage
+      }));
+    }
     if (lastEvent?.type === "orchestration_complete") {
       router.push(`/project/${projectId}/results`);
     }
@@ -140,6 +161,9 @@ export default function OrchestrationView() {
               <span className="font-mono text-sm">Back to {project?.status === 'completed' ? 'Results' : 'Dashboard'}</span>
             </Link>
             <div className="flex items-center space-x-4">
+              <Link href="/settings" className="p-2 text-muted-foreground hover:text-primary transition-colors" title="Settings">
+                <Settings className="w-5 h-5" />
+              </Link>
               <div className="flex items-center space-x-2">
                 <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-success animate-pulse shadow-[0_0_10px_rgba(0,255,136,0.5)]' : 'bg-muted'}`} />
                 <span className="font-mono text-sm text-muted-foreground">
@@ -158,10 +182,22 @@ export default function OrchestrationView() {
                 Run ID: #{projectId.slice(0, 8)}
               </p>
             </div>
-            <div className="text-right">
-              <span className="font-mono text-xs text-primary uppercase tracking-wider">SWARM PROGRESS</span>
-              <div className="font-mono text-lg mt-1 font-bold">
-                {status?.progress || 0}% Complete
+            <div className="text-right flex items-center space-x-6">
+              {(project.status === 'failed' || (project.status === 'orchestrating' && !isConnected)) && (
+                <button
+                  onClick={handleResume}
+                  disabled={isResuming}
+                  className="bg-primary hover:bg-primary-hover text-background px-6 py-2 rounded-lg font-bold transition-all shadow-[0_0_15px_rgba(0,212,255,0.4)] flex items-center space-x-2 disabled:opacity-50"
+                >
+                  {isResuming ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
+                  <span>{project.status === 'failed' ? 'Retry Swarm' : 'Continue Swarm'}</span>
+                </button>
+              )}
+              <div>
+                <span className="font-mono text-xs text-primary uppercase tracking-wider">SWARM PROGRESS</span>
+                <div className="font-mono text-lg mt-1 font-bold">
+                  {status?.progress || 0}% Complete
+                </div>
               </div>
             </div>
           </div>
@@ -198,9 +234,9 @@ export default function OrchestrationView() {
             </span>
           </div>
           <div className="glass-panel p-4 rounded-lg flex flex-col border border-border">
-            <span className="font-mono text-xs text-muted-foreground uppercase tracking-wider">SYSTEM STATUS</span>
-            <span className={`text-2xl font-bold mt-1 ${isConnected ? "text-success drop-shadow-[0_0_8px_rgba(0,255,136,0.5)]" : "text-muted-foreground"}`}>
-              {isConnected ? "Online" : "Offline"}
+            <span className="font-mono text-xs text-muted-foreground uppercase tracking-wider">TOKEN USAGE</span>
+            <span className={`text-2xl font-bold mt-1 ${totalTokens > 0 ? "text-success drop-shadow-[0_0_8px_rgba(0,255,136,0.5)]" : "text-muted-foreground"}`}>
+              {totalTokens.toLocaleString()}
             </span>
           </div>
         </div>
@@ -282,8 +318,9 @@ export default function OrchestrationView() {
                   {events.map((event, index) => (
                     <div key={index} className="relative flex items-start space-x-4 pl-8">
                       <div className={`absolute left-0 w-4 h-4 rounded-full border-2 border-background ${
-                        event.type === "agent_complete" ? "bg-success shadow-[0_0_8px_rgba(0,255,136,0.6)]" :
                         event.type === "error" ? "bg-error shadow-[0_0_8px_rgba(255,68,68,0.6)]" :
+                        event.type === "provider_error" ? "bg-warning animate-pulse" :
+                        event.type === "agent_complete" ? "bg-success shadow-[0_0_8px_rgba(0,255,136,0.6)]" :
                         event.type === "agent_critique" ? "bg-warning shadow-[0_0_8px_rgba(255,176,32,0.6)]" :
                         event.type === "agent_retry" ? "bg-error" :
                         event.type === "provider_selected" ? "bg-secondary" :
@@ -292,6 +329,7 @@ export default function OrchestrationView() {
                         "bg-primary/50 animate-pulse"
                       }`} />
                       <div className={`flex-1 bg-surface p-3 rounded-md border ${
+                        event.is_token_exhausted || event.is_token_error ? "border-error bg-error/5" :
                         event.type === "agent_critique" ? "border-warning/50 bg-warning/10" :
                         event.type === "agent_retry" ? "border-error/50 bg-error/10 shadow-[0_0_10px_rgba(255,68,68,0.2)]" :
                         event.type === "provider_selected" ? "border-secondary/30 bg-secondary/5" :
@@ -299,6 +337,7 @@ export default function OrchestrationView() {
                       }`}>
                         <div className="flex justify-between items-center mb-1">
                           <span className={`font-mono text-[10px] font-bold uppercase tracking-wider ${
+                            event.is_token_exhausted || event.is_token_error ? "text-error animate-pulse" :
                             event.type === "error" ? "text-error" : 
                             event.type === "agent_critique" ? "text-warning" :
                             event.type === "agent_retry" ? "text-error" :
@@ -308,6 +347,8 @@ export default function OrchestrationView() {
                           }`}>
                             {event.agent || "SYSTEM"} 
                             {event.target_agent && ` ➔ ${event.target_agent}`}
+                            {event.is_token_exhausted && " [CRITICAL: TOKENS EXHAUSTED]"}
+                            {event.is_token_error && " [RETRYING NEXT PROVIDER]"}
                           </span>
                           {event.timestamp && (
                             <time className="font-mono text-[10px] text-muted-foreground">

@@ -21,7 +21,8 @@ class AuditOutput(BaseModel):
 class AuditAgent(BaseAgent):
     """Audit Agent for reviewing and critiquing other agents' outputs"""
     
-    def __init__(self):
+    def __init__(self, api_keys: Optional[Dict[str, str]] = None):
+        super().__init__(api_keys)
         self.system_prompt = """You are a Senior Technical Auditor and Quality Assurance Expert with 20+ years of experience.
 Your goal is to ensure every piece of generated content meets the highest professional standards.
 

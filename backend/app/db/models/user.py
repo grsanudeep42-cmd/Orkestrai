@@ -18,6 +18,11 @@ class User(Base):
     username: Mapped[str] = mapped_column(String(100), unique=True, nullable=False)
     password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
     github_token: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    openai_key: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    gemini_key: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    groq_key: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    openrouter_key: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    bob_key: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=datetime.utcnow)
     
     def __repr__(self) -> str:

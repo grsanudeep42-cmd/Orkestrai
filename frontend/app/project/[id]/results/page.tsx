@@ -3,8 +3,9 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Download, CheckCircle2, AlertCircle, Loader2, FileText, Code, FileJson, GitBranch, Terminal, ChevronDown, ChevronUp, RefreshCw } from "lucide-react";
+import { ArrowLeft, Download, CheckCircle2, AlertCircle, Loader2, FileText, Code, FileJson, GitBranch, Terminal, ChevronDown, ChevronUp, RefreshCw, Settings } from "lucide-react";
 import { apiClient } from "@/lib/api/client";
+import { useWebSocket } from "@/hooks/use-websocket";
 import { Project, GeneratedArtifact } from "@/types";
 import { formatDistanceToNow } from "date-fns";
 import ReactMarkdown from "react-markdown";
@@ -16,7 +17,7 @@ const parseUTCDate = (dateString: string | undefined | null) => {
   return new Date(dateString.endsWith('Z') ? dateString : dateString + 'Z');
 };
 
-const ArtifactRenderer = ({ type, content, projectId }: { type: string; content: string; projectId: string }) => {
+const ArtifactRenderer = ({ type, content, projectId, events }: { type: string; content: string; projectId: string; events: any[] }) => {
   // Try to parse as JSON first in case some agents still output JSON
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let data: any;
@@ -169,7 +170,18 @@ const ArtifactRenderer = ({ type, content, projectId }: { type: string; content:
 
           <div className="p-4 bg-muted/5 border border-border rounded-lg">
             <h4 className="font-bold text-foreground mb-2 text-sm">GitHub Operations Log</h4>
-            <pre className="font-mono text-[10px] text-muted-foreground whitespace-pre-wrap max-h-40 overflow-y-auto">{data.message || "Ready for integration."}</pre>
+            <div className="font-mono text-[10px] text-muted-foreground whitespace-pre-wrap max-h-40 overflow-y-auto space-y-1">
+              {events.filter(e => e.agent === "GitHubAgent").length > 0 ? (
+                events.filter(e => e.agent === "GitHubAgent").map((e, idx) => (
+                  <div key={idx} className="border-l border-primary/30 pl-2">
+                    <span className="text-primary/70 mr-2">[{new Date(e.timestamp).toLocaleTimeString()}]</span>
+                    {e.message || e.type}
+                  </div>
+                ))
+              ) : (
+                <div>{data.message || "Ready for integration."}</div>
+              )}
+            </div>
           </div>
         </div>
       );
@@ -226,6 +238,26 @@ export default function ResultsPage() {
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<string>("");
   const [showLogs, setShowLogs] = useState(false);
+  
+  const { events: liveEvents } = useWebSocket(projectId);
+
+  // Combine live events and historical logs
+  const mappedHistoricalLogs = logs.map(log => ({
+    type: log.status === 'completed' ? 'agent_complete' : 
+          log.status === 'failed' ? 'error' : 
+          log.agent_name === 'AuditAgent' ? 'agent_critique' : 'agent_start',
+    agent: log.agent_name,
+    message: log.output_preview || log.action.replace(/_/g, ' '),
+    timestamp: log.started_at,
+    duration_ms: log.duration_ms,
+    data: log.full_output
+  }));
+
+  const events = [...mappedHistoricalLogs, ...liveEvents].filter((event, index, self) => 
+    index === self.findIndex((e) => (
+      e.timestamp === event.timestamp && e.agent === event.agent && e.message === event.message
+    ))
+  );
 
   useEffect(() => {
     const fetchData = async () => {
@@ -365,10 +397,15 @@ export default function ResultsPage() {
       <header className="border-b border-border bg-background/80 backdrop-blur-xl sticky top-0 z-50">
         <div className="container mx-auto px-6 py-4">
           <div className="flex items-center justify-between mb-4">
-            <Link href="/" className="flex items-center space-x-2 text-muted-foreground hover:text-primary transition-colors">
-              <ArrowLeft className="w-5 h-5" />
-              <span className="font-mono text-sm">Back to Dashboard</span>
-            </Link>
+            <div className="flex items-center space-x-4">
+              <Link href="/" className="flex items-center space-x-2 text-muted-foreground hover:text-primary transition-colors">
+                <ArrowLeft className="w-5 h-5" />
+                <span className="font-mono text-sm">Back to Dashboard</span>
+              </Link>
+              <Link href="/settings" className="p-2 text-muted-foreground hover:text-primary transition-colors" title="Settings">
+                <Settings className="w-5 h-5" />
+              </Link>
+            </div>
             {project.status === "completed" && (
               <div className="flex items-center space-x-2 text-success">
                 <CheckCircle2 className="w-5 h-5" />
@@ -459,7 +496,7 @@ export default function ResultsPage() {
 
                   {/* Artifact Content */}
                   <div className="p-8 bg-background min-h-[500px]">
-                    <ArtifactRenderer type={activeArtifact.artifact_type} content={activeArtifact.content} projectId={projectId as string} />
+                    <ArtifactRenderer type={activeArtifact.artifact_type} content={activeArtifact.content} projectId={projectId as string} events={events} />
                   </div>
                 </div>
               )}

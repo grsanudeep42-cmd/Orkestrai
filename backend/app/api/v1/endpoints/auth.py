@@ -12,7 +12,7 @@ import jwt
 from passlib.context import CryptContext
 from app.db.session import get_db
 from app.db.models.user import User
-from app.schemas.user import UserCreate, UserLogin, UserResponse, Token, CaptchaResponse, GithubTokenUpdate
+from app.schemas.user import UserCreate, UserLogin, UserResponse, Token, CaptchaResponse, UserKeysUpdate
 from app.config import settings
 
 router = APIRouter()
@@ -148,25 +148,48 @@ async def get_me(current_user: User = Depends(get_current_user)):
         id=current_user.id,
         username=current_user.username,
         created_at=current_user.created_at,
-        has_github_token=current_user.github_token is not None
+        has_github_token=current_user.github_token is not None,
+        has_openai_key=current_user.openai_key is not None,
+        has_gemini_key=current_user.gemini_key is not None,
+        has_groq_key=current_user.groq_key is not None,
+        has_openrouter_key=current_user.openrouter_key is not None,
+        has_bob_key=current_user.bob_key is not None
     )
 
 
-@router.post("/github-token", response_model=UserResponse)
-async def update_github_token(
-    token_data: GithubTokenUpdate,
+@router.post("/keys", response_model=UserResponse)
+async def update_user_keys(
+    keys_data: UserKeysUpdate,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    """Update user's GitHub token"""
-    current_user.github_token = token_data.github_token
+    """Update user's API keys and tokens"""
+    if keys_data.github_token is not None:
+        current_user.github_token = keys_data.github_token if keys_data.github_token != "" else None
+    if keys_data.openai_key is not None:
+        current_user.openai_key = keys_data.openai_key if keys_data.openai_key != "" else None
+    if keys_data.gemini_key is not None:
+        current_user.gemini_key = keys_data.gemini_key if keys_data.gemini_key != "" else None
+    if keys_data.groq_key is not None:
+        current_user.groq_key = keys_data.groq_key if keys_data.groq_key != "" else None
+    if keys_data.openrouter_key is not None:
+        current_user.openrouter_key = keys_data.openrouter_key if keys_data.openrouter_key != "" else None
+    if keys_data.bob_key is not None:
+        current_user.bob_key = keys_data.bob_key if keys_data.bob_key != "" else None
+        
     await db.commit()
     await db.refresh(current_user)
+    
     return UserResponse(
         id=current_user.id,
         username=current_user.username,
         created_at=current_user.created_at,
-        has_github_token=True
+        has_github_token=current_user.github_token is not None,
+        has_openai_key=current_user.openai_key is not None,
+        has_gemini_key=current_user.gemini_key is not None,
+        has_groq_key=current_user.groq_key is not None,
+        has_openrouter_key=current_user.openrouter_key is not None,
+        has_bob_key=current_user.bob_key is not None
     )
 
 
@@ -183,7 +206,11 @@ async def delete_github_token(
         id=current_user.id,
         username=current_user.username,
         created_at=current_user.created_at,
-        has_github_token=False
+        has_github_token=False,
+        has_openai_key=current_user.openai_key is not None,
+        has_gemini_key=current_user.gemini_key is not None,
+        has_groq_key=current_user.groq_key is not None,
+        has_openrouter_key=current_user.openrouter_key is not None
     )
 
 # Made with Bob

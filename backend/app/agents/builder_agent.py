@@ -16,16 +16,24 @@ logger = structlog.get_logger()
 
 class BuilderAgent(BaseAgent):
     """Builder Agent for generating real code scaffold"""
-    
-    def __init__(self):
+
+    def __init__(self, api_keys: Optional[Dict[str, str]] = None):
+        super().__init__(api_keys)
         self.system_prompt = """You are an elite Senior Principal Software Engineer and System Architect. 
-You write production-ready, clean, and functional code.
+You write production-ready, clean, and functional code that prioritizes security, robustness, and maintainability.
+
+CORE RESPONSIBILITIES:
+1) Clean Code - Functional, modular, and DRY (Don't Repeat Yourself) principles.
+2) Security First - Use Pydantic for input validation, password hashing (e.g., passlib), and sanitization to prevent injection.
+3) Robust Error Handling - Explicit try/except blocks and standardized error responses.
+4) Comprehensive Documentation - Clear docstrings, comments for complex logic, and a detailed README.
+5) Seamless Integration - Ensure backend and frontend are perfectly connected.
 
 CRITICAL INSTRUCTIONS:
 - You MUST generate REAL CODE files for a complete project scaffold.
 - Do NOT use placeholders, TODOs, or pseudocode.
-- Ensure the backend and frontend are fully integrated and follow the provided architecture.
-- Use best practices for the chosen stack (e.g., error handling, type safety, modularity).
+- Use best practices for the chosen stack (e.g., async/await for Python, type safety in TypeScript).
+- Implement explicit authentication and authorization flows (e.g., JWT).
 - Return files using this exact delimiter format:
 
 ===FILE: path/to/file.py===
@@ -34,9 +42,7 @@ file content here
 other content here
 ===END===
 
-- Be concise but complete. Do not truncate files.
-- Ensure the response is well-structured for immediate parsing."""
-    
+- Be concise but complete. Do not truncate files."""
     async def generate_implementation_plan(
         self, 
         strategy_output: Union[str, Dict[str, Any]],
@@ -44,13 +50,14 @@ other content here
         user_input: str,
         preferences: Optional[Dict[str, Any]] = None,
         memory: Optional[Dict[str, Any]] = None,
-        event_callback: Optional[Callable] = None
+        event_callback: Optional[Callable] = None,
+        project_id: Optional[str] = None
     ) -> Dict[str, Any]:
         """
         Generate actual code based on strategy and architecture
         """
         start_time = datetime.utcnow()
-        
+
         try:
             if event_callback:
                 await event_callback({
@@ -58,7 +65,7 @@ other content here
                     "agent": "BuilderAgent",
                     "timestamp": start_time.isoformat()
                 })
-            
+
             memory_context = self.format_memory(memory)
             safe_input = self.sanitize_input(user_input)
 
@@ -67,25 +74,31 @@ other content here
 
             user_prompt = f"""Generate a high-quality, production-ready codebase for the following project:
 
-PROJECT IDEA:
-{safe_input}
+    PROJECT IDEA:
+    {safe_input}
 
-STRATEGY & GOALS:
-{strategy_text}
+    STRATEGY & GOALS:
+    {strategy_text}
 
-ARCHITECTURAL SPECIFICATIONS:
-{arch_text}
+    ARCHITECTURAL SPECIFICATIONS:
+    {arch_text}
 
-USER PREFERENCES:
-{json.dumps(preferences or {})}
+    USER PREFERENCES:
+    {json.dumps(preferences or {})}
+    {memory_context}
 
-REQUIRED FILES:
-- Backend: Main entry point, database models, API routes, configuration, requirements.txt, and a Dockerfile.
-- Frontend: Main page, key reusable components, state hooks, package.json, and a Dockerfile.
-- Infrastructure: docker-compose.yml for orchestration, .env.example, and a comprehensive README.md.
+    REQUIRED CODE STANDARDS:
+    1. **Security**: Implement Pydantic validation for all API models, secure password hashing, and JWT-based authentication.
+    2. **Error Handling**: Use global exception handlers and explicit try/except blocks in critical paths.
+    3. **Naming**: Follow snake_case for Python and camelCase for TypeScript/JavaScript, consistent with the architecture.
+    4. **Validation**: All user-provided data must be validated and sanitized before processing or storage.
 
-Ensure the code is functional, modular, and matches the architecture perfectly. Do not provide a plan; provide the actual files."""
-            
+    REQUIRED FILES:
+    - Backend: Main entry point, Pydantic schemas, database models (SQLAlchemy), API routes, security utils, requirements.txt, and a Dockerfile.
+    - Frontend: Main page, API client, reusable components, TypeScript types, package.json, and a Dockerfile.
+    - Infrastructure: docker-compose.yml for orchestration, .env.example, and a comprehensive README.md with setup instructions.
+
+    Ensure the code is functional, modular, and matches the architecture perfectly. Provide the actual files now."""            
             if event_callback:
                 await event_callback({
                     "type": "agent_thinking",
@@ -97,6 +110,7 @@ Ensure the code is functional, modular, and matches the architecture perfectly. 
             raw_response = await llm_router.generate_text(
                 system_prompt=self.system_prompt,
                 user_prompt=user_prompt,
+                api_keys=self.api_keys,
                 target_agent="BuilderAgent",
                 temperature=0.2,
                 max_tokens=8000,
@@ -173,30 +187,7 @@ Ensure the code is functional, modular, and matches the architecture perfectly. 
                     "timestamp": datetime.utcnow().isoformat()
                 })
             
-            # In case of failure, return fallback zip logic
-            fallback_data = self._create_fallback_implementation(strategy_output, architecture_output, f"Error: {str(e)}")
-            
-            zip_buffer = io.BytesIO()
-            with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zip_file:
-                for file_obj in fallback_data.get("files", []):
-                    zip_file.writestr(file_obj["path"], file_obj["content"])
-            
-            base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-            static_dir = os.path.join(base_dir, "static", "generated")
-            os.makedirs(static_dir, exist_ok=True)
-            zip_filename = f"{project_id}_fallback.zip"
-            zip_path = os.path.join(static_dir, zip_filename)
-            with open(zip_path, "wb") as f:
-                f.write(zip_buffer.getvalue())
-            
-            return {
-                "message": fallback_data.get("message", "Fallback generated"),
-                "files_generated": len(fallback_data.get("files", [])),
-                "zip_url": f"/static/generated/{zip_filename}",
-                "file_tree": [f["path"] for f in fallback_data.get("files", [])],
-                "zip_path": zip_path,
-                "files": fallback_data.get("files", [])
-            }
+            raise e
     
     def _create_fallback_implementation(
         self, 

@@ -22,7 +22,7 @@ class Settings(BaseSettings):
     GROQ_MODEL: str = "llama-3.3-70b-versatile"
 
     # AI Provider routing
-    PROVIDER_PRIORITY: str = "groq,gemini,openrouter,openai"
+    PROVIDER_PRIORITY: str = "bob,groq,gemini,openrouter,openai"
     PROVIDER_TIMEOUT: int = 120 # seconds
     
     # Database Pool Settings
@@ -74,9 +74,6 @@ class Settings(BaseSettings):
 
         if not self.SECRET_KEY:
             missing.append("SECRET_KEY")
-
-        if not self.GROQ_API_KEY and not self.GEMINI_API_KEY and not self.OPENAI_API_KEY and not self.OPENROUTER_API_KEY:
-            missing.append("At least one LLM provider API key (GROQ_API_KEY, GEMINI_API_KEY, OPENAI_API_KEY, or OPENROUTER_API_KEY)")
 
         if missing:
             raise ValueError(

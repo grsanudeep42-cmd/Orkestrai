@@ -35,7 +35,8 @@ class GithubOutputPlan(BaseModel):
 class GitHubAgent(BaseAgent):
     """GitHub Agent for creating repos and pushing code"""
     
-    def __init__(self):
+    def __init__(self, api_keys: Optional[Dict[str, str]] = None):
+        super().__init__(api_keys)
         self.system_prompt = """You are an elite DevOps Engineer and Open Source Maintainer.
 Your goal is to define the ideal repository setup and automation for a new project.
 
@@ -149,10 +150,10 @@ Create comprehensive GitHub details including:
             issues_created = 0
             workflows_created = 0
 
-            # Use user's token from database first, fallback to settings ONLY for testing
-            github_token = current_user.github_token if current_user and current_user.github_token else settings.GITHUB_TOKEN
+            # Use user's token from database
+            github_token = current_user.github_token
             
-            if github_token and github_token != "your_github_personal_access_token_here":
+            if github_token:
                 try:
                     g = Github(github_token)
                     user = g.get_user()
@@ -219,18 +220,27 @@ Create comprehensive GitHub details including:
                     # Add workflows after pushing code
                     for wf in github_plan.get("workflows", []):
                         try:
-                            yaml.safe_load(wf['content'])
+                            # Cleanup literal \n if present (common LLM artifact)
+                            wf_content = wf.get('content', '')
+                            if "\\n" in wf_content and "\n" not in wf_content:
+                                wf_content = wf_content.replace("\\n", "\n")
+                            
+                            # Final validation of YAML
+                            try:
+                                yaml.safe_load(wf_content)
+                            except yaml.YAMLError as ye:
+                                logger.warning(f"Invalid YAML for workflow {wf.get('name')}: {ye}")
+                                continue
+
                             repo.create_file(
-                                path=f".github/workflows/{wf['name']}.yml",
-                                message=f"Add {wf['name']} workflow",
-                                content=wf['content'],
+                                path=f".github/workflows/{wf.get('name')}.yml",
+                                message=f"Add {wf.get('name')} workflow",
+                                content=wf_content,
                                 branch="main"
                             )
                             workflows_created += 1
-                        except yaml.YAMLError as ye:
-                            logger.warning(f"Invalid YAML for workflow {wf['name']}: {ye}")
                         except Exception as e:
-                            logger.warning(f"Failed to add workflow {wf['name']}: {e}")
+                            logger.warning(f"Failed to add workflow {wf.get('name')}: {e}")
 
                     # Create Develop branch
                     try:
@@ -287,7 +297,11 @@ Create comprehensive GitHub details including:
                     "main_branch": "main",
                     "development_branch": "develop",
                     "feature_branches": "feature/*"
-                }
+                },
+                "message": f"Successfully created repository '{github_plan.get('repository_name')}' on GitHub. "
+                           f"Pushed codebase and {workflows_created} CI/CD workflows. "
+                           f"Created {issues_created} issues in the backlog. "
+                           f"Repository is ready for development."
             }
             
             end_time = datetime.utcnow()
@@ -323,7 +337,7 @@ Create comprehensive GitHub details including:
                     "timestamp": datetime.utcnow().isoformat()
                 })
             
-            return self._create_fallback_github(strategy_output, architecture_output, implementation_output, f"Error: {str(e)}")
+            raise e
     
     def _create_fallback_github(
         self, 
