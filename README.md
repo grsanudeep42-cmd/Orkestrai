@@ -1,6 +1,8 @@
 <div align="center">
   <h1>🚀 OrkestrAI</h1>
   
+  <img src="assets/banner.png" alt="OrkestrAI Banner" style="max-width: 100%; height: auto; margin: 16px 0;" />
+
   <h3><em>Empowering Hackathons through Autonomous Multi-Agent Orchestration</em></h3>
 
   [![Next.js](https://img.shields.io/badge/Next.js-16-black?style=for-the-badge&logo=next.js)](https://nextjs.org/)
